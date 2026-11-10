@@ -222,11 +222,11 @@ function useArrive(ref: RefObject<HTMLElement | null>) {
 
 const RISE = { hide: { y: "110%" }, show: { y: "0%", transition: { duration: 0.75, ease: EASE } } };
 
-/** Display heading whose words climb out of a mask as it scrolls in. A newline breaks the line. */
+/** Display heading whose words climb out of a mask as it scrolls in, in the brand green. A newline breaks the line. */
 function Rise({ text, className, flicker }: { text: string; className?: string; flicker?: boolean }) {
   let n = 0;
   return (
-    <motion.h2 className={className} initial="hide" whileInView="show" viewport={{ once: true, margin: "0px 0px -12% 0px" }} variants={{ hide: {}, show: { transition: { staggerChildren: 0.06 } } }}>
+    <motion.h2 className={cx("text-accent", className)} initial="hide" whileInView="show" viewport={{ once: true, margin: "0px 0px -12% 0px" }} variants={{ hide: {}, show: { transition: { staggerChildren: 0.06 } } }}>
       {text.split("\n").map((line, l) => (
         <Fragment key={l}>
           {l > 0 && <br />}
@@ -408,7 +408,7 @@ function NowPlayingRoom({ list, onHover, onPick }: { list: TokenSummary[]; onHov
         </button>
         <div className="pointer-events-none relative z-10 flex h-full flex-col items-center justify-between px-4 pb-20 pt-10 text-center md:pb-14">
           <div>
-            <Rise text="Now playing" className="font-title text-[36px] leading-none text-ink md:text-[60px]" />
+            <Rise text="Now playing" className="font-title text-[36px] leading-none md:text-[60px]" />
             <span className="num mt-3 block text-[13px] text-ink-2">
               [ {two(i + 1)} / {two(list.length)} ]
             </span>

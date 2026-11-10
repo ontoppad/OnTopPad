@@ -43,7 +43,7 @@ function WalletButton() {
     return (
       <Button variant="primary" size="sm" onClick={w.openPicker}>
         <Wallet size={16} strokeWidth={1.5} />
-        Insert coin
+        Connect<span className="hidden sm:inline">&nbsp;wallet</span>
       </Button>
     );
   }
