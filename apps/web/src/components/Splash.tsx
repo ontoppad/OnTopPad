@@ -106,16 +106,14 @@ function Boot({ onDone }: { onDone: () => void }) {
   const enterRef = useRef(enter);
   enterRef.current = enter;
 
+  // only an explicit press opens the site: Enter or Space, a click or a tap (never a timer, never Tab or a shortcut)
   useEffect(() => {
-    const key = () => enterRef.current();
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") enterRef.current();
+    };
     addEventListener("keydown", key);
     return () => removeEventListener("keydown", key);
   }, []);
-  useEffect(() => {
-    if (!ready) return;
-    const t = setTimeout(() => enterRef.current(), 2400);
-    return () => clearTimeout(t);
-  }, [ready]);
 
   const corner = "absolute size-6 border-white/60";
   return (
@@ -192,7 +190,7 @@ function Boot({ onDone }: { onDone: () => void }) {
               <motion.div key="start" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-1">
                 <span className="blink font-title text-[22px] text-lime md:text-[28px]">Press start</span>
                 <span className="num text-[11px] text-ink-3">
-                  <span className="hidden pointer-fine:inline">Click or press any key</span>
+                  <span className="hidden pointer-fine:inline">Click or press Enter</span>
                   <span className="pointer-fine:hidden">Tap anywhere</span>
                 </span>
               </motion.div>
