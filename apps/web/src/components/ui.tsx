@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode, type RefObject } from "react";
 import { Link } from "react-router";
 import { motion } from "motion/react";
 import { Check, Copy, ExternalLink } from "lucide-react";
@@ -193,10 +193,38 @@ export function TierMeter({ tier, next, compact }: { tier: keyof typeof TIER_IND
   );
 }
 
+/**
+ * Box of the active child (marked by `selector`) inside `ref`, for a pill that slides between items.
+ * Offsets are relative to the container, so page scroll never moves the pill; a shared-layout animation
+ * measures against the page and flies in from far away when a click also changes scroll.
+ */
+type Box = { left: number; top: number; width: number; height: number };
+
+export function usePill(ref: RefObject<HTMLElement | null>, selector: string, key: unknown) {
+  const [pill, setPill] = useState<Box | null>(null);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = ref.current?.querySelector<HTMLElement>(selector);
+      setPill(el ? { left: el.offsetLeft, top: el.offsetTop, width: el.offsetWidth, height: el.offsetHeight } : null);
+    };
+    measure();
+    void document.fonts.ready.then(measure);
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [ref, selector, key]);
+  return pill;
+}
+
+export function Pill({ at }: { at: Box | null }) {
+  return at ? <span aria-hidden className="absolute rounded-full bg-lime transition-[left,top,width,height] duration-300 ease-out" style={at} /> : null;
+}
+
 export function Segmented<T extends string>({ value, options, onChange, className }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; className?: string }) {
-  const id = useId();
+  const ref = useRef<HTMLDivElement>(null);
+  const pill = usePill(ref, '[aria-selected="true"]', value);
   return (
-    <div className={cx("inline-flex gap-1 rounded-full border border-line bg-deep p-1", className)} role="tablist">
+    <div ref={ref} className={cx("relative inline-flex gap-1 rounded-full border border-line bg-deep p-1", className)} role="tablist">
+      <Pill at={pill} />
       {options.map((o) => (
         <button
           key={o.value}
@@ -205,7 +233,6 @@ export function Segmented<T extends string>({ value, options, onChange, classNam
           onClick={() => onChange(o.value)}
           className={cx("relative h-8 whitespace-nowrap rounded-full px-4 text-[13px] transition-colors duration-150", value === o.value ? "font-semibold text-lime-ink" : "text-ink-2 hover:text-ink")}
         >
-          {value === o.value && <motion.span layoutId={`seg${id}`} className="absolute inset-0 rounded-full bg-lime" transition={{ type: "spring", bounce: 0.2, duration: 0.4 }} />}
           <span className="relative">{o.label}</span>
         </button>
       ))}

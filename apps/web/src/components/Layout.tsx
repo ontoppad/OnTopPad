@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate, useOutlet } from "react-router";
 import { AnimatePresence, motion, MotionConfig, useScroll, useSpring } from "motion/react";
 import { Activity, BookOpen, Gamepad2, Gift, Moon, Rocket, Search, Sun, UserRound, Wallet, X } from "lucide-react";
@@ -7,7 +7,7 @@ import { useActivity, useConfig } from "../lib/api.ts";
 import { chain, contracts, network } from "../lib/chain.ts";
 import { ago, eth, short } from "../lib/format.ts";
 import { useWallet } from "../lib/wallet.tsx";
-import { Button, cx, TokenArt } from "./ui.tsx";
+import { Button, cx, Pill, TokenArt, usePill } from "./ui.tsx";
 
 const NAV = [
   { to: "/arcade", label: "Arcade", icon: Gamepad2 },
@@ -219,13 +219,16 @@ function Footer() {
 
 function MobileTabs() {
   const tabs = [NAV[0]!, NAV[1]!, NAV[2]!, NAV[3]!, NAV[4]!];
+  const { pathname } = useLocation();
+  const idx = tabs.findIndex((t) => pathname.startsWith(t.to));
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label="Main">
+      {/* positioned by column, not by a shared-layout animation: those measure against page scroll and fly in from below after a scroll reset */}
+      {idx >= 0 && <span aria-hidden className="absolute top-0 h-0.5 w-8 rounded-full bg-lime transition-[left] duration-300 ease-out" style={{ left: `calc(${idx * 20 + 10}% - 16px)` }} />}
       {tabs.map(({ to, label, icon: Icon }) => (
         <NavLink key={to} to={to} className={({ isActive }) => cx("relative flex h-14 flex-col items-center justify-center gap-1 text-[11px] transition-colors duration-150", isActive ? "text-ink" : "text-ink-3")}>
           {({ isActive }) => (
             <>
-              {isActive && <motion.span layoutId="tab-dot" className="absolute top-0 h-0.5 w-8 rounded-full bg-lime" transition={{ type: "spring", bounce: 0.25, duration: 0.45 }} />}
               <Icon size={18} strokeWidth={1.5} className={cx("transition-transform duration-200", isActive && "-translate-y-0.5 text-accent")} />
               {label}
             </>
@@ -247,6 +250,8 @@ export function Layout() {
   const [theme, toggle] = useTheme();
   const { pathname } = useLocation();
   const outlet = useOutlet();
+  const navRef = useRef<HTMLElement>(null);
+  const pill = usePill(navRef, 'a[aria-current="page"]', pathname);
   // a wallet lookup on Rewards stays on the same page; anything else is a new screen
   const page = pathname.startsWith("/rewards") ? "/rewards" : pathname;
   useEffect(() => {
@@ -261,15 +266,11 @@ export function Layout() {
             <img src="/brand/logo-256.webp" alt="" width={36} height={36} className="rounded-lg" />
             <span className="hidden sm:block text-[16px] font-semibold tracking-tight">ONTOPPAD</span>
           </Link>
-          <nav className="ml-4 hidden md:flex items-center gap-1" aria-label="Main">
+          <nav ref={navRef} className="relative ml-4 hidden md:flex items-center gap-1" aria-label="Main">
+            <Pill at={pill} />
             {NAV.map(({ to, label }) => (
               <NavLink key={to} to={to} className={({ isActive }) => cx("relative h-8 rounded-full px-3 text-[14px] leading-8 transition-colors duration-150", isActive ? "font-semibold text-lime-ink" : "text-ink-2 hover:text-ink")}>
-                {({ isActive }) => (
-                  <>
-                    {isActive && <motion.span layoutId="nav-pill" className="absolute inset-0 rounded-full bg-lime" transition={{ type: "spring", bounce: 0.2, duration: 0.45 }} />}
-                    <span className="relative">{label}</span>
-                  </>
-                )}
+                <span className="relative">{label}</span>
               </NavLink>
             ))}
           </nav>

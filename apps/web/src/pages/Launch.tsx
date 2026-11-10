@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { ImagePlus, Shuffle } from "lucide-react";
@@ -9,7 +9,7 @@ import { errorText, launch } from "../lib/chain.ts";
 import { eth, usd } from "../lib/format.ts";
 import { useWallet } from "../lib/wallet.tsx";
 import { useToast } from "../components/toast.tsx";
-import { Button, Card, cx, PageHero, Reveal, Spec, Stamp, TokenArt } from "../components/ui.tsx";
+import { Button, Card, cx, PageHero, Pill, Reveal, Spec, Stamp, TokenArt, usePill } from "../components/ui.tsx";
 
 const STEPS = ["Character", "Loadout", "Links", "Press start"] as const;
 const FDVS = [0.05, 0.1, 0.5, 1, 5];
@@ -64,6 +64,8 @@ export default function Launch() {
   const [firstBuy, setFirstBuy] = useState("0.001");
   const [links, setLinks] = useState({ x: "", telegram: "", website: "" });
   const [busy, setBusy] = useState<string | null>(null);
+  const steps = useRef<HTMLOListElement>(null);
+  const stepPill = usePill(steps, '[aria-current="step"]', step);
 
   const preview = useMemo(() => (image ? URL.createObjectURL(image) : null), [image]);
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
@@ -118,7 +120,8 @@ export default function Launch() {
       />
 
       <section className="px-4 py-12 md:px-6">
-        <ol className="flex flex-wrap gap-2" aria-label="Steps">
+        <ol ref={steps} className="relative flex flex-wrap gap-2" aria-label="Steps">
+          <Pill at={stepPill} />
           {STEPS.map((s, i) => (
             <li key={s}>
               <button
@@ -129,8 +132,7 @@ export default function Launch() {
                   i === step ? "border-[var(--sticker-shadow)] font-semibold text-lime-ink" : "border-line text-ink-3 hover:text-ink",
                 )}
               >
-                {i === step && <motion.span layoutId="launch-step" className="absolute inset-0 rounded-full bg-lime" transition={{ type: "spring", bounce: 0.2, duration: 0.4 }} />}
-                <span className={cx("num relative grid size-5 place-items-center rounded-full text-[11px]", i === step ? "bg-[var(--sticker-shadow)] text-lime" : i < step ? "bg-lime text-lime-ink" : "bg-deep")}>{i + 1}</span>
+                  <span className={cx("num relative grid size-5 place-items-center rounded-full text-[11px]", i === step ? "bg-[var(--sticker-shadow)] text-lime" : i < step ? "bg-lime text-lime-ink" : "bg-deep")}>{i + 1}</span>
                 <span className="relative">{s}</span>
               </button>
             </li>
