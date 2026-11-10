@@ -80,7 +80,7 @@ export function Stat({ label, value, format, sub, empty, accent }: { label: stri
     <div className="flex flex-col gap-2">
       <span className="text-[13px] text-ink-3">{label}</span>
       {value > 0 ? (
-        <Num value={value} format={format} className={cx("text-[28px] leading-none font-medium tracking-tight", accent && "text-accent")} />
+        <Num value={value} format={format} className={cx("text-[24px] sm:text-[28px] leading-none font-medium tracking-tight", accent && "text-accent")} />
       ) : (
         <span className="text-[20px] leading-7 text-ink-2">{empty}</span>
       )}

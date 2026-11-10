@@ -290,7 +290,7 @@ export default function Launch() {
           </Card>
           <Card className="p-5">
             <span className="text-[13px] text-ink-3">Gas on {cfg?.label ?? "Robinhood Chain"}</span>
-            <p className="mt-2 text-[14px] text-ink-2">A launch costs about 1.6M gas, a few cents of ETH at current Robinhood Chain prices.</p>
+            <p className="mt-2 text-[14px] text-ink-2">A launch costs about 1.6M gas, a few cents of ETH at current Robinhood Chain prices</p>
           </Card>
         </div>
       </div>

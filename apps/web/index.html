@@ -18,7 +18,7 @@
     <meta name="twitter:image" content="/brand/og.jpg" />
     <script>
       try {
-        var t = localStorage.getItem("ontop-theme");
+        var t = new URLSearchParams(location.search).get("theme") || localStorage.getItem("ontop-theme");
         if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
       } catch (e) {}
     </script>

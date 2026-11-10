@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import type { TokenSummary } from "../lib/api.ts";
-import { ago, amount, eth, pct, usd } from "../lib/format.ts";
+import { ago, amount, eth, or, pct, usd } from "../lib/format.ts";
 import { Spark } from "./Chart.tsx";
 import { cx, Stamp, TokenArt } from "./ui.tsx";
 
@@ -48,7 +48,7 @@ export function TokenCard({ t, rank }: { t: TokenSummary; rank?: number }) {
       <div className="grid grid-cols-3 gap-2 border-t border-line pt-4 text-[12px]">
         <div className="flex flex-col gap-1">
           <span className="text-ink-3">Holders</span>
-          <span className="num text-ink">{t.holders}</span>
+          <span className="num text-ink">{or(t.holders, String, "Be first")}</span>
         </div>
         <div className="flex flex-col gap-1">
           <span className="text-ink-3">{t.paid > 0 ? "Paid out" : "Pot"}</span>
@@ -56,11 +56,11 @@ export function TokenCard({ t, rank }: { t: TokenSummary; rank?: number }) {
         </div>
         <div className="flex flex-col gap-1">
           <span className="text-ink-3">Bonus paid</span>
-          <span className="num text-ink">{amount(t.bonusPaid)}</span>
+          <span className="num text-ink">{or(t.bonusPaid, amount, "Ready")}</span>
         </div>
       </div>
       <span className="num text-[12px] text-ink-3">
-        {t.lastTradeAt ? `Last trade ${ago(t.lastTradeAt)}` : `Launched ${ago(t.launchedAt)}`} · {t.trades} trades
+        {t.lastTradeAt ? `Last trade ${ago(t.lastTradeAt)}` : `Launched ${ago(t.launchedAt)}`} · {or(t.trades, (n) => `${n} trades`, "awaiting the first trade")}
       </span>
     </Link>
   );

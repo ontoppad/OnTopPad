@@ -65,4 +65,10 @@ export function span(sec: number): string {
   return `${Math.max(1, m)}m`;
 }
 
+/** Shares and percentages never print as 0.00%. */
+export const share = (v: number) => (v >= 0.01 ? `${v.toFixed(2)}%` : "<0.01%");
+
+/** The no-zero rule: a figure, or words that say what will fill it. */
+export const or = (v: number, fmt: (v: number) => string, fallback: string) => (v > 0 ? fmt(v) : fallback);
+
 export const bps = (b: number) => `${(b / 100).toFixed(b % 100 ? 1 : 0)}%`;

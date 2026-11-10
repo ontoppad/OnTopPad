@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { isAddress } from "viem";
 import { useLeaderboard, useStats, useWalletView } from "../lib/api.ts";
 import { txUrl } from "../lib/chain.ts";
-import { ago, amount, eth, short, usd } from "../lib/format.ts";
+import { ago, amount, eth, share, short, usd } from "../lib/format.ts";
 import { AreaChart } from "../components/Chart.tsx";
 import { Button, Card, Num, Skeleton, Stat, TierMeter, TokenArt } from "../components/ui.tsx";
 
@@ -24,7 +24,7 @@ function Lookup({ address }: { address: string }) {
           <Stat label="Tokens held" value={data.holdings.length} format={(v) => Math.round(v).toString()} sub={data.holdings.length ? `${usd(data.holdings.reduce((s, h) => s + h.valueUsd, 0))} total` : undefined} empty="Empty bag" />
         </Card>
       </div>
-      {nothing && <p className="text-[14px] text-ink-2">This wallet hasn't touched an OnTop launch yet.</p>}
+      {nothing && <p className="text-[14px] text-ink-2">This wallet hasn't touched an OnTop launch yet</p>}
       {data.payouts.length > 0 && (
         <Card className="overflow-x-auto">
           <table className="w-full min-w-[520px] text-[13px] num">
@@ -60,7 +60,7 @@ function Lookup({ address }: { address: string }) {
               <TokenArt src={h.image} address={h.token} symbol={h.symbol} size={32} />
               <span className="w-24 num text-[13px]">${h.symbol}</span>
               <TierMeter tier={h.tier} next={h.next} />
-              <span className="ml-auto num text-[13px] text-ink-2">{h.share.toFixed(2)}% of next round</span>
+              <span className="ml-auto num text-[13px] text-ink-2">{share(h.share)} of next round</span>
             </Link>
           ))}
         </div>

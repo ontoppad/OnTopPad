@@ -1,7 +1,7 @@
 import { Link, useParams } from "react-router";
 import { useWalletView } from "../lib/api.ts";
 import { txUrl } from "../lib/chain.ts";
-import { ago, amount, eth, short, usd } from "../lib/format.ts";
+import { ago, amount, eth, share, short, usd } from "../lib/format.ts";
 import { useWallet } from "../lib/wallet.tsx";
 import { AddressChip, Button, ButtonLink, Card, Skeleton, Stat, TierMeter, TokenArt } from "../components/ui.tsx";
 
@@ -17,7 +17,7 @@ export default function Portfolio() {
       <div className="mx-auto flex max-w-xl flex-col items-center gap-4 px-4 py-24 text-center">
         <img src="/brand/logo-256.webp" alt="" width={96} height={96} className="rotate-[-4deg] rounded-xl" />
         <h1 className="text-[28px] font-semibold">Player one, insert coin</h1>
-        <p className="text-[15px] text-ink-2">Connect a wallet to see your bags, your hold-time tiers and every payout you've received.</p>
+        <p className="text-[15px] text-ink-2">Connect a wallet to see your bags, your hold-time tiers and every payout you've received</p>
         <div className="flex gap-3">
           <Button variant="primary" size="lg" onClick={w.openPicker}>
             Insert coin
@@ -66,7 +66,7 @@ export default function Portfolio() {
                 <TierMeter tier={h.tier} next={h.next} />
                 <span className="num text-[13px] md:text-right">{amount(h.balance)}</span>
                 <span className="num text-[13px] text-ink-2 md:text-right">{usd(h.valueUsd)}</span>
-                <span className="num text-[13px] text-accent md:text-right">{h.nextPayout > 0 ? `${eth(h.nextPayout)} next` : `${h.share.toFixed(2)}% share`}</span>
+                <span className="num text-[13px] text-accent md:text-right">{h.nextPayout > 0 ? `${eth(h.nextPayout)} next` : `${share(h.share)} share`}</span>
               </Link>
             ))}
             {data.holdings.length === 0 && (

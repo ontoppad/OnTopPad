@@ -4,7 +4,7 @@ import { ArrowLeft, Globe, Send } from "lucide-react";
 import { buyerEdge, feeFor } from "@ontoppad/shared";
 import { useCandles, useConfig, useHolders, useRounds, useToken, useTrades } from "../lib/api.ts";
 import { addressUrl, txUrl } from "../lib/chain.ts";
-import { ago, amount, eth, price, short, usd } from "../lib/format.ts";
+import { ago, amount, eth, or, price, share, short, usd } from "../lib/format.ts";
 import { CandleChart } from "../components/Chart.tsx";
 import { TradePanel } from "../components/TradePanel.tsx";
 import { ChangeText } from "../components/TokenCard.tsx";
@@ -85,13 +85,13 @@ function Holders({ address }: { address: string }) {
                 <TierMeter tier={h.tier} next={h.next} compact />
               </td>
               <td className="px-5 py-3 text-right num">{amount(h.balance)}</td>
-              <td className="px-5 py-3 text-right num text-ink-2">{h.pct.toFixed(2)}%</td>
+              <td className="px-5 py-3 text-right num text-ink-2">{share(h.pct)}</td>
               <td className="px-5 py-3 text-right num">
                 <span className="inline-flex items-center gap-2">
                   <span className="h-1.5 w-16 overflow-hidden rounded-full bg-raised">
                     <span className="block h-full bg-lime" style={{ width: `${Math.min(100, h.share)}%` }} />
                   </span>
-                  {h.share.toFixed(2)}%
+                  {share(h.share)}
                 </span>
               </td>
             </tr>
@@ -213,9 +213,9 @@ export default function Token() {
         {[
           ["Market cap", usd(t.fdvUsd), `${eth(t.fdv)}`],
           ["Volume 24h", t.volume24h > 0 ? usd(t.volume24hUsd) : "Quiet today", t.volume > 0 ? `${usd(t.volumeUsd)} all time` : "First trade pending"],
-          ["Holders", String(t.holders), `${t.traders} traders`],
-          ["Paid to holders", t.paid > 0 ? eth(t.paid) : "Round 1 filling", t.rounds > 0 ? `${t.rounds} rounds` : `${eth(t.pot)} in the pot`],
-          ["Bonus paid", amount(t.bonusPaid), `${t.bonusBuys} buys got it`],
+          ["Holders", or(t.holders, String, "First buyer wins"), or(t.traders, (n) => `${n} traders`, "Market just opened")],
+          ["Paid to holders", t.paid > 0 ? eth(t.paid) : "Round 1 filling", t.rounds > 0 ? `${t.rounds} round${t.rounds > 1 ? "s" : ""}` : `${eth(t.pot)} in the pot`],
+          ["Bonus paid", or(t.bonusPaid, amount, `${t.bonusBps / 100}% ready`), or(t.bonusBuys, (n) => `${n} buys got it`, "Waiting on the first buy")],
           ["Treasury left", `${t.reservePct.toFixed(1)}%`, `${amount(t.reserve)} tokens`],
         ].map(([k, v, s]) => (
           <div key={k} className="flex flex-col gap-1 bg-card p-4">
@@ -244,7 +244,7 @@ export default function Token() {
                 onChange={setTab}
                 options={[
                   { value: "trades", label: "Trades" },
-                  { value: "holders", label: `Holders ${t.holders}` },
+                  { value: "holders", label: t.holders ? `Holders ${t.holders}` : "Holders" },
                   { value: "rounds", label: "Payout rounds" },
                   { value: "specs", label: "Specs" },
                 ]}

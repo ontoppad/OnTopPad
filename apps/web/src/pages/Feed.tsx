@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { useActivity, useStats } from "../lib/api.ts";
 import { txUrl } from "../lib/chain.ts";
-import { ago, amount, eth, short, usd } from "../lib/format.ts";
+import { ago, amount, eth, or, short, usd } from "../lib/format.ts";
 import { Card, cx, Segmented, Skeleton, TokenArt } from "../components/ui.tsx";
 
 const TYPES = [
@@ -27,7 +27,7 @@ export default function Feed() {
         <p className="text-[15px] text-ink-2">Launches, trades and holder payouts across the pad as blocks land</p>
         {s && (
           <p className="num text-[12px] text-ink-3">
-            {s.trades} trades · {amount(s.bonusTokens)} bonus tokens to buyers · {eth(s.paid || s.pot)} {s.paid ? "paid to holders" : "filling holder pots"} · {usd(s.volumeUsd)} volume
+            {or(s.trades, (n) => `${n} trades`, "First trade pending")} · {or(s.bonusTokens, (v) => `${amount(v)} bonus tokens to buyers`, "bonus ready on the first buy")} · {s.paid ? `${eth(s.paid)} paid to holders` : or(s.pot, (v) => `${eth(v)} filling holder pots`, "holder pots open")}
           </p>
         )}
       </div>

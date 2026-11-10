@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Search } from "lucide-react";
 import { useStats, useTokens } from "../lib/api.ts";
-import { amount, eth, usd } from "../lib/format.ts";
+import { amount, eth, or, usd } from "../lib/format.ts";
 import { TokenCard } from "../components/TokenCard.tsx";
 import { ButtonLink, Segmented, Skeleton, Stamp, TokenArt } from "../components/ui.tsx";
 
@@ -72,7 +72,7 @@ export default function Arcade() {
       </div>
       {stats && (
         <p className="mt-3 num text-[12px] text-ink-3">
-          {stats.tokens} tokens · {stats.trades} trades · {usd(stats.bonusUsd)} in bonus tokens paid · indexed block {stats.indexed.toLocaleString("en-US")}
+          {stats.tokens} tokens · {or(stats.trades, (n) => `${n} trades`, "first trade pending")} · {or(stats.bonusUsd, (v) => `${usd(v)} in bonus tokens paid`, "bonus ready on the first buy")} · indexed block {stats.indexed.toLocaleString("en-US")}
         </p>
       )}
 

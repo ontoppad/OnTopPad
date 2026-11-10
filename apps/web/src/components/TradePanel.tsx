@@ -5,7 +5,7 @@ import { formatEther, formatUnits, parseEther } from "viem";
 import { buyerEdge, feeFor } from "@ontoppad/shared";
 import type { TokenSummary } from "../lib/api.ts";
 import { buy, errorText, quote, sell, tokenBalance } from "../lib/chain.ts";
-import { amount as fmtAmount, eth, usd } from "../lib/format.ts";
+import { amount as fmtAmount, eth, or, usd } from "../lib/format.ts";
 import { useWallet } from "../lib/wallet.tsx";
 import { useToast } from "./toast.tsx";
 import { Button, cx, Num, Segmented, Stamp } from "./ui.tsx";
@@ -128,7 +128,7 @@ export function TradePanel({ token, ethUsd }: { token: TokenSummary; ethUsd: num
           ]}
         />
         <span className="num text-[12px] text-ink-3">
-          {w.address ? (side === "buy" ? eth(ethBal) : `${fmtAmount(tokBal)} $${token.symbol}`) : "Wallet not connected"}
+          {w.address ? (side === "buy" ? or(ethBal, eth, "Wallet needs ETH") : or(tokBal, (v) => `${fmtAmount(v)} $${token.symbol}`, `No $${token.symbol} yet`)) : "Wallet not connected"}
         </span>
       </div>
 

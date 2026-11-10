@@ -119,6 +119,7 @@ export default function CoinScene({ onFlip }: { onFlip?: () => void }) {
       renderer.domElement.style.height = `${h}px`;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      pivot.scale.setScalar(Math.min(1, camera.aspect * 0.95));
     };
     resize();
     const ro = new ResizeObserver(resize);
@@ -181,7 +182,6 @@ export default function CoinScene({ onFlip }: { onFlip?: () => void }) {
       coin.rotation.x = Math.PI / 2 + flipDone;
       pivot.rotation.x += (tiltX - pivot.rotation.x) * 0.06;
       pivot.rotation.z += (-tiltY * 0.3 - pivot.rotation.z) * 0.06;
-      pivot.position.y = 1.15 + (reduced ? 0 : Math.sin(clock.elapsedTime * 1.2) * 0.06);
       dots.rotation.y += 0.04 * dt;
       renderer.render(scene, camera);
     };

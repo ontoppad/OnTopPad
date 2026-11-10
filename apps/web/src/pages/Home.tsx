@@ -194,7 +194,6 @@ export default function Home() {
           <Pillar className="lg:col-span-7" kicker="01" title="Ahead from block one" body="You don't start from zero. You start with an edge. Every buy gets extra tokens from the launch treasury, on top of what the pool pays." proof="bonus shown in the quote before every buy">
             <div className="grid gap-2 sm:grid-cols-3">
               {(tokens ?? []).slice(0, 3).map((t) => {
-                const edge = ((1 - feeFor(t.bonusBps) / 1e6) * (1 + t.bonusBps / 1e4) - 1) * 100;
                 return (
                   <Link key={t.address} to={`/token/${t.address}`} className="flex flex-col gap-3 rounded-xl border border-line bg-deep p-4 hover:border-line-2 transition-colors duration-150">
                     <div className="flex items-center gap-2">
@@ -202,11 +201,12 @@ export default function Home() {
                       <span className="num text-[13px]">${t.symbol}</span>
                     </div>
                     <Stamp bps={t.bonusBps} className="self-start" />
-                    <span className="num text-[12px] text-ink-3">net +{edge.toFixed(2)}% after fee</span>
+                    <span className="num text-[12px] text-ink-3">{t.bonusBuys ? `${amount(t.bonusPaid)} paid over ${t.bonusBuys} buys` : `${(feeFor(t.bonusBps) / 1e4).toFixed(2)}% pool fee`}</span>
                   </Link>
                 );
               })}
             </div>
+            <p className="mt-4 num text-[12px] text-ink-3">bonus = tokens bought × bonusBps ÷ 10,000, paid by OnTopHook.afterSwap, capped by the treasury left</p>
           </Pillar>
           <Pillar className="lg:col-span-5" kicker="02" title="Paid for patience" body="Not for the fastest. For the ones who stay. Your share of every payout grows with how long your tokens have sat in your wallet." proof="time-weighted payout tiers">
             <div className="flex flex-col gap-2">
