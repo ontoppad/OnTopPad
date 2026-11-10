@@ -8,6 +8,7 @@ import { chain, contracts, network } from "../lib/chain.ts";
 import { ago, eth, short } from "../lib/format.ts";
 import { useWallet } from "../lib/wallet.tsx";
 import { Button, cx, Pill, TokenArt, usePill } from "./ui.tsx";
+import { Splash } from "./Splash.tsx";
 
 const NAV = [
   { to: "/arcade", label: "Arcade", icon: Gamepad2 },
@@ -299,6 +300,7 @@ export function Layout() {
       <Footer />
       <MobileTabs />
       <WalletPicker />
+      <Splash />
     </div>
     </MotionConfig>
   );

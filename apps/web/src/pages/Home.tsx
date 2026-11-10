@@ -698,7 +698,7 @@ function BigStat({ label, value, format, empty }: { label: string; value: number
 function Receipts({ house, ethUsd }: { house?: TokenSummary; ethUsd: number }) {
   const { data: s } = useStats();
   return (
-    <section data-ch="Receipts" className="relative px-4 pb-24 pt-40 md:px-6">
+    <section data-ch="Receipts" className="relative overflow-x-clip px-4 pb-24 pt-40 md:px-6">
       <PixelEdge from="#000000" />
       <div className="relative z-10 grid gap-12 lg:grid-cols-[1.2fr_1fr] lg:items-center">
         <div>
@@ -727,7 +727,7 @@ function Receipts({ house, ethUsd }: { house?: TokenSummary; ethUsd: number }) {
             <WalletCheck />
           </div>
         </div>
-        <motion.div initial={{ opacity: 0, x: 60, rotate: 2 }} whileInView={{ opacity: 1, x: 0, rotate: 0 }} viewport={{ once: true, margin: "0px 0px -10% 0px" }} transition={{ duration: 0.8, ease: EASE }}>
+        <motion.div initial={{ opacity: 0, y: 60, rotate: 2 }} whileInView={{ opacity: 1, y: 0, rotate: 0 }} viewport={{ once: true, margin: "0px 0px -10% 0px" }} transition={{ duration: 0.8, ease: EASE }}>
           <QuoteCard token={house} ethUsd={ethUsd} />
         </motion.div>
       </div>

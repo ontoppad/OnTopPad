@@ -175,6 +175,39 @@ body {
   95% { opacity: 1; }
 }
 
+/* the splash title: an RGB split tears through it every few seconds */
+.glitch {
+  text-shadow: 0 0 22px rgb(203 253 0 / 0.4);
+  animation: glitch 2.6s steps(1) infinite;
+}
+@keyframes glitch {
+  0%, 84%, 100% { text-shadow: 0 0 22px rgb(203 253 0 / 0.4); transform: none; }
+  85% { text-shadow: -4px 0 #ff2bd6, 4px 0 #22f2ff; transform: translateX(3px); }
+  88% { text-shadow: 4px 0 #ff2bd6, -4px 0 #22f2ff; transform: translateX(-3px) skewX(-8deg); }
+  91% { text-shadow: -2px 0 #ff2bd6, 2px 0 #22f2ff; transform: none; }
+}
+
+.blink {
+  animation: blink 1s steps(1) infinite;
+}
+@keyframes blink {
+  50% { opacity: 0.15; }
+}
+
+/* the bright refresh band that rolls down an old tube */
+.crt-roll::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: -20%;
+  height: 18%;
+  background: linear-gradient(transparent, rgb(255 255 255 / 0.05), transparent);
+  animation: roll 5s linear infinite;
+}
+@keyframes roll {
+  to { top: 110%; }
+}
+
 .scrollbar-none {
   scrollbar-width: none;
 }
@@ -191,6 +224,8 @@ input[type="range"] {
   *::before,
   *::after {
     animation-duration: 1ms !important;
+    /* one pass, or looping 1ms animations turn into random flicker */
+    animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
   }
 }
