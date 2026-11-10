@@ -195,7 +195,7 @@ function NetworkStatus() {
   const { data } = useConfig();
   const live = data && data.head - data.indexed < 120;
   return (
-    <span className="hidden md:inline-flex items-center gap-2 h-8 rounded-lg border border-line px-3 text-[13px] text-ink-2" title={data ? `Indexed to block ${data.indexed.toLocaleString("en-US")}` : undefined}>
+    <span className="hidden lg:inline-flex items-center gap-2 h-8 rounded-lg border border-line px-3 text-[13px] text-ink-2" title={data ? `Indexed to block ${data.indexed.toLocaleString("en-US")}` : undefined}>
       <span className={cx("size-2 rounded-full", live ? "bg-lime" : "bg-ink-3")} />
       {network.label}
     </span>
@@ -206,7 +206,8 @@ function Footer() {
   const { data } = useConfig();
   return (
     <footer className="mt-24 border-t border-line pb-24 md:pb-8">
-      <div className="mx-auto grid gap-8 px-4 py-10 md:grid-cols-[1.2fr_0.6fr_1fr_1fr] md:px-6">
+      {/* auto columns hug their content, so the last one ends flush with the page padding like every section; mobile stacks full width */}
+      <div className="grid gap-x-12 gap-y-8 px-4 py-10 md:grid-cols-[1fr_auto] md:px-6 lg:grid-cols-[1fr_auto_auto_auto]">
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <img src="/brand/logo-256.webp" alt="ONTOPPAD" width={40} height={40} className="rounded-lg" />
@@ -313,7 +314,7 @@ export function Layout() {
         <div className="mx-auto flex h-16 items-center gap-4 px-4 md:px-6">
           <Link to="/" className="flex items-center gap-3 shrink-0" aria-label="ONTOPPAD home">
             <img src="/brand/logo-256.webp" alt="" width={36} height={36} className="rounded-lg" />
-            <span className="hidden sm:block text-[16px] font-semibold tracking-tight">ONTOPPAD</span>
+            <span className="hidden sm:block md:hidden lg:block text-[16px] font-semibold tracking-tight">ONTOPPAD</span>
           </Link>
           <nav ref={navRef} className="relative ml-4 hidden md:flex items-center gap-1" aria-label="Main">
             <Pill at={pill} />
