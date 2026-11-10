@@ -25,9 +25,8 @@ const ROOM = "stage-dark relative isolate h-[calc(100svh-100px)] min-h-[600px] o
 
 // ───────────── chrome: camera HUD and cursor label ─────────────
 
-/** The viewfinder the whole landing is shot through: frame rate, live block, date and clock. */
+/** The viewfinder the whole landing is shot through: corner marks and the channel we're on. */
 function Hud({ ready }: { ready: boolean }) {
-  const { data: cfg } = useConfig();
   const [ch, setCh] = useState<{ n: number; name: string }>();
   // the room crossing the middle of the screen is the channel we're on
   useEffect(() => {
@@ -41,25 +40,6 @@ function Hud({ ready }: { ready: boolean }) {
     rooms.forEach((r) => io.observe(r));
     return () => io.disconnect();
   }, [ready]);
-  const [fps, setFps] = useState<number>();
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    let frames = 0;
-    let last = performance.now();
-    let raf = 0;
-    const tick = (t: number) => {
-      frames++;
-      if (t - last >= 500) {
-        setFps(Math.round((frames * 1000) / (t - last)));
-        setNow(new Date());
-        frames = 0;
-        last = t;
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, []);
   const corner = "absolute size-5 border-white/70";
   return (
     <div aria-hidden className="pointer-events-none fixed inset-x-3 bottom-4 top-[110px] z-30 font-mono text-[11px] text-white mix-blend-difference md:inset-x-4 md:text-[12px]">
@@ -68,7 +48,6 @@ function Hud({ ready }: { ready: boolean }) {
       {/* on a phone the bottom of every room is busy with buttons; the frame keeps only its top */}
       <span className={cx(corner, "bottom-0 left-0 hidden rounded-bl-lg border-b border-l md:block")} />
       <span className={cx(corner, "bottom-0 right-0 hidden rounded-br-lg border-b border-r md:block")} />
-      {fps ? <span className="absolute left-4 top-3">{fps} fps</span> : null}
       <AnimatePresence mode="wait">
         {ch && (
           <motion.span key={ch.n} initial={{ opacity: 0, x: -6 }} animate={{ opacity: [0, 1, 0.4, 1], x: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }} className="absolute left-1/2 top-3 -translate-x-1/2 whitespace-nowrap">
@@ -77,16 +56,6 @@ function Hud({ ready }: { ready: boolean }) {
           </motion.span>
         )}
       </AnimatePresence>
-      <span className="absolute right-4 top-3 flex items-center gap-2">
-        <span className="size-1.5 animate-pulse rounded-full bg-white" />
-        LIVE{cfg ? <span className="hidden sm:inline"> · BLK {cfg.head.toLocaleString("en-US")}</span> : null}
-      </span>
-      <span className="absolute bottom-3 left-4 hidden md:block">
-        [ {two(now.getDate())} / {two(now.getMonth() + 1)} / {two(now.getFullYear() % 100)} ]
-      </span>
-      <span className="absolute bottom-3 right-4 hidden md:block">
-        [ {two(now.getHours())} : {two(now.getMinutes())} : {two(now.getSeconds())} ]
-      </span>
     </div>
   );
 }
@@ -285,17 +254,19 @@ function Hero({ tokens, onHover, onPick }: { tokens: TokenSummary[]; onHover: (h
           </Suspense>
         )}
         <div aria-hidden className="crt-overlay pointer-events-none absolute inset-0" />
-        <motion.div style={{ opacity: copy }} className="pointer-events-none relative z-10 flex h-full flex-col items-center justify-between px-4 pb-24 pt-[7vh] text-center md:pb-16">
-          <motion.h1
-            initial={{ opacity: 0, filter: "blur(14px)", scale: 1.04 }}
-            animate={arrived ? { opacity: 1, filter: "blur(0px)", scale: 1 } : undefined}
-            transition={{ duration: 1.1, ease: EASE }}
-            className="text-glow font-title text-[34px] leading-[1.05] text-lime sm:text-[60px] lg:text-[88px]"
-          >
-            Start ahead.
-            <br />
-            Stay paid.
-          </motion.h1>
+        <motion.div style={{ opacity: copy }} className="pointer-events-none relative z-10 flex h-full flex-col items-center justify-end px-4 pb-24 text-center md:pb-16">
+          <div className="absolute inset-0 flex items-center justify-center px-4">
+            <motion.h1
+              initial={{ opacity: 0, filter: "blur(14px)", scale: 1.04 }}
+              animate={arrived ? { opacity: 1, filter: "blur(0px)", scale: 1 } : undefined}
+              transition={{ duration: 1.1, ease: EASE }}
+              className="text-glow font-title text-[38px] leading-[1.05] text-lime sm:text-[68px] lg:text-[104px]"
+            >
+              Start ahead.
+              <br />
+              Stay paid.
+            </motion.h1>
+          </div>
           <motion.div initial={{ opacity: 0, y: 16 }} animate={arrived ? { opacity: 1, y: 0 } : undefined} transition={{ duration: 0.7, delay: 0.5, ease: EASE }} className="flex flex-col items-center gap-5">
             <span aria-hidden className="text-[30px] font-thin leading-none text-ink-2">
               +
