@@ -7,7 +7,7 @@ import { readFile } from "node:fs/promises";
 import { isAddress } from "viem";
 import { MAX_BONUS_BPS, MIN_BONUS_BPS, SUPPLY, TREASURY_BPS, HOLDERS_BPS, CREATOR_BPS, PLATFORM_BPS, TIERS } from "@ontoppad/shared";
 import { config, network } from "./config.ts";
-import { contracts } from "./chain.ts";
+import { contracts, wallet } from "./chain.ts";
 import { runIndexer, indexerState } from "./indexer.ts";
 import { runKeeper } from "./keeper.ts";
 import { runPriceFeed, getEthUsd } from "./price.ts";
@@ -17,6 +17,20 @@ import * as q from "./queries.ts";
 const app = new Hono().basePath("/api");
 // public read API: anyone can verify the numbers from their own tools
 app.use("*", cors({ origin: "*", allowMethods: ["GET"] }));
+
+// The operator wallet (deployer/keeper) never appears on the site: every API response swaps it for "house".
+const hidden = [wallet?.account.address, ...(process.env.HIDE_ADDRESSES ?? "").split(",")]
+  .filter((a): a is string => !!a && isAddress(a))
+  .map((a) => new RegExp(a, "gi"));
+app.use("*", async (c, next) => {
+  await next();
+  if (!hidden.length || !c.res.headers.get("content-type")?.includes("application/json")) return;
+  let body = await c.res.text();
+  for (const re of hidden) body = body.replace(re, "house");
+  const headers = new Headers(c.res.headers);
+  headers.delete("content-length");
+  c.res = new Response(body, { status: c.res.status, headers });
+});
 
 /** shortcut: per-process 4s memo for the heavy read models; swap for real caching if traffic outgrows one VPS. */
 const memo = new Map<string, { at: number; v: unknown }>();

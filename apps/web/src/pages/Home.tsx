@@ -156,7 +156,7 @@ export default function Home() {
             </ButtonLink>
           </div>
         </motion.div>
-        <div className="relative flex min-h-[520px] items-end justify-center lg:min-h-[640px]">
+        <div className="relative flex min-h-[440px] items-end justify-center sm:min-h-[520px] lg:min-h-[640px]">
           <Suspense fallback={null}>
             <CoinScene onFlip={() => setStep((s) => s + 1)} />
           </Suspense>

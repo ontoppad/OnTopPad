@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { useActivity, useStats } from "../lib/api.ts";
 import { txUrl } from "../lib/chain.ts";
-import { ago, amount, eth, or, short, usd } from "../lib/format.ts";
+import { ago, amount, eth, isHouse, or, short, usd } from "../lib/format.ts";
 import { Card, cx, Segmented, Skeleton, TokenArt } from "../components/ui.tsx";
 
 const TYPES = [
@@ -68,7 +68,7 @@ export default function Feed() {
                   </Link>
                 </td>
                 <td className="px-5 py-3 num text-ink-2">
-                  {a.kind === "payout" ? `${a.recipients} holders` : a.account ? <Link to={`/portfolio/${a.account}`} className="hover:text-ink">{short(a.account)}</Link> : null}
+                  {a.kind === "payout" ? `${a.recipients} holders` : a.account ? isHouse(a.account) ? short(a.account) : <Link to={`/portfolio/${a.account}`} className="hover:text-ink">{short(a.account)}</Link> : null}
                 </td>
                 <td className="px-5 py-3 text-right num">{a.kind === "launch" ? <span className="text-ink-3">new pool</span> : a.quoteUsd && a.quoteUsd >= 0.01 ? usd(a.quoteUsd) : eth(a.quoteAmount ?? 0)}</td>
                 <td className="px-5 py-3 text-right num">

@@ -4,7 +4,7 @@ import { ArrowLeft, Globe, Send } from "lucide-react";
 import { buyerEdge, feeFor } from "@ontoppad/shared";
 import { useCandles, useConfig, useHolders, useRounds, useToken, useTrades } from "../lib/api.ts";
 import { addressUrl, txUrl } from "../lib/chain.ts";
-import { ago, amount, eth, or, price, share, short, usd } from "../lib/format.ts";
+import { ago, amount, eth, isHouse, or, price, share, short, usd } from "../lib/format.ts";
 import { CandleChart } from "../components/Chart.tsx";
 import { TradePanel } from "../components/TradePanel.tsx";
 import { ChangeText } from "../components/TokenCard.tsx";
@@ -37,9 +37,13 @@ function Trades({ address, symbol }: { address: string; symbol: string }) {
           {data.map((t) => (
             <tr key={`${t.tx}${t.ts}${t.trader}`} className="border-t border-line">
               <td className="px-5 py-3">
-                <Link to={`/portfolio/${t.trader}`} className="text-ink-2 hover:text-ink">
-                  {short(t.trader)}
-                </Link>
+                {isHouse(t.trader) ? (
+                  <span className="text-ink-2">{short(t.trader)}</span>
+                ) : (
+                  <Link to={`/portfolio/${t.trader}`} className="text-ink-2 hover:text-ink">
+                    {short(t.trader)}
+                  </Link>
+                )}
               </td>
               <td className={cx("px-5 py-3", t.side === "buy" ? "text-up" : "text-down-ink")}>{t.side === "buy" ? "Buy" : "Sell"}</td>
               <td className="px-5 py-3 text-right">{eth(t.quoteAmount, "")}</td>
@@ -77,9 +81,13 @@ function Holders({ address }: { address: string }) {
           {data.items.map((h) => (
             <tr key={h.account} className="border-t border-line">
               <td className="px-5 py-3 num">
-                <Link to={`/portfolio/${h.account}`} className="text-ink-2 hover:text-ink">
-                  {short(h.account)}
-                </Link>
+                {isHouse(h.account) ? (
+                  <span className="text-ink-2">{short(h.account)}</span>
+                ) : (
+                  <Link to={`/portfolio/${h.account}`} className="text-ink-2 hover:text-ink">
+                    {short(h.account)}
+                  </Link>
+                )}
               </td>
               <td className="px-5 py-3">
                 <TierMeter tier={h.tier} next={h.next} compact />
@@ -180,9 +188,13 @@ export default function Token() {
               <AddressChip address={t.address} />
               <span className="text-[13px] text-ink-3">
                 by{" "}
-                <Link to={`/portfolio/${t.creator}`} className="num text-ink-2 hover:text-ink">
-                  {short(t.creator)}
-                </Link>{" "}
+                {isHouse(t.creator) ? (
+                  <span className="text-ink-2">{short(t.creator)}</span>
+                ) : (
+                  <Link to={`/portfolio/${t.creator}`} className="num text-ink-2 hover:text-ink">
+                    {short(t.creator)}
+                  </Link>
+                )}{" "}
                 · launched {ago(t.launchedAt)}
               </span>
               {t.links.x && (

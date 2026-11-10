@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { isAddress } from "viem";
 import { useLeaderboard, useStats, useWalletView } from "../lib/api.ts";
 import { txUrl } from "../lib/chain.ts";
-import { ago, amount, eth, share, short, usd } from "../lib/format.ts";
+import { ago, amount, eth, isHouse, share, short, usd } from "../lib/format.ts";
 import { AreaChart } from "../components/Chart.tsx";
 import { Button, Card, Num, Skeleton, Stat, TierMeter, TokenArt } from "../components/ui.tsx";
 
@@ -118,7 +118,7 @@ export default function Rewards() {
           <ol className="mt-4 flex flex-col gap-1">
             {(lb?.earners.length ? lb.earners : []).slice(0, 8).map((e, i) => (
               <li key={e.account}>
-                <Link to={`/rewards/${e.account}`} className="flex h-9 items-center gap-3 rounded-lg px-2 hover:bg-raised transition-colors duration-150">
+                <Link to={isHouse(e.account) ? "/rules" : `/rewards/${e.account}`} className="flex h-9 items-center gap-3 rounded-lg px-2 hover:bg-raised transition-colors duration-150">
                   <span className={`num w-6 text-[12px] ${i === 0 ? "text-accent" : "text-ink-3"}`}>{String(i + 1).padStart(2, "0")}</span>
                   <span className="num flex-1 text-[13px] text-ink-2">{short(e.account)}</span>
                   <span className="num text-[13px]">{eth(e.amount)}</span>
@@ -128,7 +128,7 @@ export default function Rewards() {
             {!lb?.earners.length &&
               (lb?.bonus ?? []).slice(0, 8).map((e, i) => (
                 <li key={e.account}>
-                  <Link to={`/rewards/${e.account}`} className="flex h-9 items-center gap-3 rounded-lg px-2 hover:bg-raised transition-colors duration-150">
+                  <Link to={isHouse(e.account) ? "/rules" : `/rewards/${e.account}`} className="flex h-9 items-center gap-3 rounded-lg px-2 hover:bg-raised transition-colors duration-150">
                     <span className="num w-6 text-[12px] text-ink-3">{String(i + 1).padStart(2, "0")}</span>
                     <span className="num flex-1 text-[13px] text-ink-2">{short(e.account)}</span>
                     <span className="num text-[13px]">{usd(e.valueUsd)} bonus</span>

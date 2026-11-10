@@ -44,7 +44,11 @@ export function pct(v: number, digits = 2): string {
   return `${v > 0 ? "+" : ""}${v.toFixed(digits)}%`;
 }
 
+/** The operator wallet arrives from the API as "house" and is never shown as an address. */
+export const isHouse = (a?: string | null) => a === "house";
+
 export function short(a?: string | null): string {
+  if (isHouse(a)) return "ONTOPPAD house";
   return a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "";
 }
 
