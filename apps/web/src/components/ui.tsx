@@ -263,7 +263,7 @@ export function PageHero({ art, badge, kicker, title, sub, children }: { art?: s
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }} className="flex min-h-[300px] flex-col items-center justify-center gap-5 px-4 py-14 text-center md:min-h-[360px]">
         {badge ?? <img src="/brand/logo-256.webp" alt="" width={64} height={64} className="rotate-[-4deg] rounded-xl border-2 border-[var(--sticker-shadow)] shadow-[4px_4px_0_var(--sticker-shadow)] transition-transform duration-300 hover:rotate-[4deg] hover:scale-110" />}
         {kicker && <span className="num text-[13px] text-ink-3">{kicker}</span>}
-        <h1 className="text-[40px] leading-[1.02] font-extrabold tracking-[-0.03em] md:text-[60px]">{title}</h1>
+        <h1 className="font-display text-[60px] leading-[0.9] font-[800] md:text-[96px]">{title}</h1>
         {sub && <p className="max-w-xl text-[16px] leading-7 text-ink-2">{sub}</p>}
         {children}
       </motion.div>
@@ -275,7 +275,7 @@ export function PageHero({ art, badge, kicker, title, sub, children }: { art?: s
 export function Heading({ title, sub, center, className }: { title: ReactNode; sub?: ReactNode; center?: boolean; className?: string }) {
   return (
     <div className={cx(center && "text-center", className)}>
-      <h2 className="text-[30px] leading-tight font-semibold tracking-tight">{title}</h2>
+      <h2 className="font-display text-[44px] leading-[0.95] font-[800] md:text-[56px]">{title}</h2>
       {sub && <p className={cx("text-[15px] text-ink-2", center ? "mt-2" : "mt-1")}>{sub}</p>}
     </div>
   );

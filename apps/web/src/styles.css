@@ -2,6 +2,7 @@
 @import "@fontsource-variable/bricolage-grotesque";
 @import "@fontsource-variable/jetbrains-mono";
 @import "@fontsource-variable/big-shoulders-inline";
+@import "lenis/dist/lenis.css";
 
 /* Arcade-at-night ramp: near-black with a faint olive cast from the logo's lime spill.
    .stage-dark keeps the landing page's screening rooms dark in the light theme too: screens need the lights off. */

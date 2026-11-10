@@ -37,7 +37,7 @@ function Hero({ top }: { top?: TokenSummary }) {
       <div className="absolute inset-x-0 bottom-0 -z-10 h-24 bg-gradient-to-b from-transparent to-bg" />
       <div className="flex min-h-[380px] flex-col items-center justify-center gap-5 px-4 py-16 text-center md:min-h-[440px]">
         <img src="/brand/logo-256.webp" alt="" width={72} height={72} className="rotate-[-4deg] rounded-xl border-2 border-[var(--sticker-shadow)] shadow-[4px_4px_0_var(--sticker-shadow)]" />
-        <h1 className="text-[44px] leading-none font-extrabold tracking-[-0.03em] md:text-[64px]">The arcade</h1>
+        <h1 className="font-display text-[68px] leading-[0.9] font-[800] md:text-[104px]">The arcade</h1>
         <p className="max-w-xl text-[16px] leading-7 text-ink-2">
           Every token on the board pays a bonus on buys and pays its holders from the trading. Pick one and press start.
         </p>
@@ -66,7 +66,7 @@ function Spotlight({ tokens }: { tokens: TokenSummary[] }) {
   if (!lead) return null;
   return (
     <section className="relative isolate mt-16">
-      <h2 className="px-4 text-center text-[30px] leading-tight font-semibold tracking-tight md:text-[40px]">Top of the board right now</h2>
+      <h2 className="font-display px-4 text-center text-[48px] leading-[0.95] font-[800] md:text-[72px]">Top of the board right now</h2>
       <p className="mt-2 px-4 text-center text-[15px] text-ink-2">Ranked by 24h volume, straight from the chain</p>
       <div className="relative z-10 mt-10 px-4 md:px-[6%]">
         <Link to={`/token/${lead.address}`} className="group relative block">
@@ -171,7 +171,7 @@ function Carousel({ tokens }: { tokens: TokenSummary[] }) {
     <section id="hot" className="scroll-mt-28 bg-deep py-16">
       <div className="flex items-end justify-between gap-4 px-4 md:px-6">
         <div>
-          <h2 className="text-[30px] leading-tight font-semibold tracking-tight">Hot right now</h2>
+          <h2 className="font-display text-[44px] leading-[0.95] font-[800] md:text-[56px]">Hot right now</h2>
           <p className="mt-1 text-[15px] text-ink-2">Where the trading, the bonus and the payouts are moving</p>
         </div>
         <div className="hidden gap-2 sm:flex">
@@ -241,7 +241,7 @@ function Board({ tokens, sort, setSort }: { tokens: TokenSummary[]; sort: Sort; 
     <section id="board" className="scroll-mt-28 px-4 py-16 md:px-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h2 className="text-[30px] leading-tight font-semibold tracking-tight">Every token on the pad</h2>
+          <h2 className="font-display text-[44px] leading-[0.95] font-[800] md:text-[56px]">Every token on the pad</h2>
           <p className="mt-1 text-[15px] text-ink-2">{list.length} on the board · sorted by {SORTS.find((s) => s.value === sort)!.label.toLowerCase()}</p>
         </div>
         <div className="relative">
@@ -287,7 +287,7 @@ const MODES: { sort: Sort; title: string; line: string }[] = [
 function Modes({ tokens, pick }: { tokens: TokenSummary[]; pick: (s: Sort) => void }) {
   return (
     <section className="border-t border-line bg-deep px-4 py-16 md:px-6">
-      <h2 className="text-center text-[30px] leading-tight font-semibold tracking-tight">Pick your game mode</h2>
+      <h2 className="font-display text-[44px] leading-[0.95] font-[800] md:text-[56px] text-center">Pick your game mode</h2>
       <p className="mt-2 text-center text-[15px] text-ink-2">Every mode reorders the board around the one number that matters</p>
       <div className="mt-10 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
         {MODES.map((m) => {
@@ -344,7 +344,7 @@ export default function Arcade() {
       <Board tokens={tokens} sort={sort} setSort={setSort} />
       <Modes tokens={tokens} pick={pick} />
       <section className="flex flex-col items-center gap-4 px-4 py-16 text-center">
-        <h2 className="text-[30px] leading-tight font-semibold tracking-tight">Your token could be next on the board</h2>
+        <h2 className="font-display text-[44px] leading-[0.95] font-[800] md:text-[56px]">Your token could be next on the board</h2>
         <p className="max-w-lg text-[15px] text-ink-2">One transaction deploys it, seeds the pool, locks the bonus treasury and switches payouts on</p>
         <ButtonLink to="/launch" variant="primary" size="lg">
           Launch a token

@@ -1,6 +1,7 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { Fragment, lazy, Suspense, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
 import { Link, useNavigate } from "react-router";
-import { animate, AnimatePresence, motion, useMotionValue, useMotionValueEvent, useScroll, useSpring, useTransform, type MotionValue } from "motion/react";
+import { animate, AnimatePresence, motion, useInView, useMotionValue, useMotionValueEvent, useScroll, useSpring, useTransform, type MotionValue } from "motion/react";
+import Lenis from "lenis";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatUnits, isAddress, parseEther } from "viem";
@@ -25,8 +26,21 @@ const ROOM = "stage-dark relative isolate h-[calc(100svh-100px)] min-h-[600px] o
 // ───────────── chrome: camera HUD and cursor label ─────────────
 
 /** The viewfinder the whole landing is shot through: frame rate, live block, date and clock. */
-function Hud() {
+function Hud({ ready }: { ready: boolean }) {
   const { data: cfg } = useConfig();
+  const [ch, setCh] = useState<{ n: number; name: string }>();
+  // the room crossing the middle of the screen is the channel we're on
+  useEffect(() => {
+    const rooms = [...document.querySelectorAll<HTMLElement>("[data-ch]")];
+    const io = new IntersectionObserver(
+      (es) => {
+        for (const e of es) if (e.isIntersecting) setCh({ n: rooms.indexOf(e.target as HTMLElement) + 1, name: (e.target as HTMLElement).dataset.ch! });
+      },
+      { rootMargin: "-50% 0px -50% 0px" },
+    );
+    rooms.forEach((r) => io.observe(r));
+    return () => io.disconnect();
+  }, [ready]);
   const [fps, setFps] = useState<number>();
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -55,6 +69,14 @@ function Hud() {
       <span className={cx(corner, "bottom-0 left-0 hidden rounded-bl-lg border-b border-l md:block")} />
       <span className={cx(corner, "bottom-0 right-0 hidden rounded-br-lg border-b border-r md:block")} />
       {fps ? <span className="absolute left-4 top-3">{fps} fps</span> : null}
+      <AnimatePresence mode="wait">
+        {ch && (
+          <motion.span key={ch.n} initial={{ opacity: 0, x: -6 }} animate={{ opacity: [0, 1, 0.4, 1], x: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }} className="absolute left-1/2 top-3 -translate-x-1/2 whitespace-nowrap">
+            CH {two(ch.n)}
+            <span className="hidden sm:inline"> · {ch.name.toUpperCase()}</span>
+          </motion.span>
+        )}
+      </AnimatePresence>
       <span className="absolute right-4 top-3 flex items-center gap-2">
         <span className="size-1.5 animate-pulse rounded-full bg-white" />
         LIVE{cfg ? <span className="hidden sm:inline"> · BLK {cfg.head.toLocaleString("en-US")}</span> : null}
@@ -159,10 +181,13 @@ function PixelEdge({ from, bottom }: { from: string; bottom?: boolean }) {
 /** CSS stand-in for a set, used where WebGL isn't available and for the small floating prints. */
 function CssTv({ t, className }: { t?: TokenSummary; className?: string }) {
   return (
-    <div className={cx("rounded-[12%/15%] bg-gradient-to-b from-[#45483f] to-[#151612] p-[6%] shadow-[0_24px_48px_rgb(0_0_0/0.6)]", className)}>
+    // padding in cqw: a percentage would be measured against the room, not the set
+    <div className={cx("@container rounded-[12%/15%] bg-gradient-to-b from-[#45483f] to-[#151612] shadow-[0_24px_48px_rgb(0_0_0/0.6)]", className)}>
+      <div className="p-[6cqw]">
       <div className="relative aspect-[4/3] overflow-hidden rounded-[9%/12%] bg-black">
         {t ? <Art t={t} className="opacity-90" /> : <div className="h-full w-full bg-[linear-gradient(90deg,#c0c0c0_14%,#c0c000_14%_28%,#00c0c0_28%_42%,#00c000_42%_57%,#c000c0_57%_71%,#c00000_71%_85%,#0000c0_85%)]" />}
         <div className="crt-overlay absolute inset-0" />
+      </div>
       </div>
     </div>
   );
@@ -179,19 +204,66 @@ function CssWall({ tokens }: { tokens: TokenSummary[] }) {
   );
 }
 
+/** A room scrolling away: its picture lags, shrinks and dims, so the next room slides over it like a curtain. */
+function useLeave(ref: RefObject<HTMLElement | null>) {
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
+  return {
+    p: scrollYProgress,
+    y: useTransform(scrollYProgress, [0, 1], ["0%", "42%"]),
+    scale: useTransform(scrollYProgress, [0, 1], [1, 0.9]),
+    shade: useTransform(scrollYProgress, [0, 0.9], [0, 0.85]),
+  };
+}
+
+/** A room arriving from below settles out of a slight zoom as its top edge climbs the screen. */
+function useArrive(ref: RefObject<HTMLElement | null>) {
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "start start"] });
+  return useTransform(scrollYProgress, [0, 1], [1.14, 1]);
+}
+
+const RISE = { hide: { y: "110%" }, show: { y: "0%", transition: { duration: 0.75, ease: EASE } } };
+
+/** Display heading whose words climb out of a mask as it scrolls in. A newline breaks the line. */
+function Rise({ text, className, flicker }: { text: string; className?: string; flicker?: boolean }) {
+  let n = 0;
+  return (
+    <motion.h2 className={className} initial="hide" whileInView="show" viewport={{ once: true, margin: "0px 0px -12% 0px" }} variants={{ hide: {}, show: { transition: { staggerChildren: 0.06 } } }}>
+      {text.split("\n").map((line, l) => (
+        <Fragment key={l}>
+          {l > 0 && <br />}
+          {line.split(" ").map((w) => {
+            const i = n++;
+            return (
+              <Fragment key={i}>
+                <span className="-mb-[0.14em] inline-block overflow-hidden pb-[0.14em] align-bottom">
+                  <motion.span variants={RISE} className="inline-block">
+                    {flicker ? <Flicker text={w} seed={i + 3} /> : w}
+                  </motion.span>
+                </span>{" "}
+              </Fragment>
+            );
+          })}
+        </Fragment>
+      ))}
+    </motion.h2>
+  );
+}
+
+const STAGGER = { hide: {}, show: { transition: { staggerChildren: 0.08 } } };
+const LIFT = { hide: { opacity: 0, y: 28 }, show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE } } };
+
 // ───────────── 1 · the wall ─────────────
 
 function Hero({ tokens, onHover, onPick }: { tokens: TokenSummary[]; onHover: (h: Hover) => void; onPick: (to: string) => void }) {
   const ref = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
+  const leave = useLeave(ref);
   const push = useRef(0);
-  useMotionValueEvent(scrollYProgress, "change", (v) => (push.current = v));
-  const fade = useTransform(scrollYProgress, [0, 0.95], [1, 0.25]);
-  const lift = useTransform(scrollYProgress, [0, 1], [0, -140]);
+  useMotionValueEvent(leave.p, "change", (v) => (push.current = v));
+  const copy = useTransform(leave.p, [0, 0.55], [1, 0]);
   const [failed, setFailed] = useState(false);
   return (
-    <section ref={ref} className={cx(ROOM, "bg-[#0b0f0e]")}>
-      <motion.div style={{ opacity: fade }} className="absolute inset-0">
+    <section ref={ref} data-ch="Start ahead" className={cx(ROOM, "bg-[#0b0f0e]")}>
+      <motion.div style={{ y: leave.y, scale: leave.scale }} className="absolute inset-0 origin-top">
         {failed ? (
           <CssWall tokens={tokens} />
         ) : (
@@ -199,37 +271,38 @@ function Hero({ tokens, onHover, onPick }: { tokens: TokenSummary[]; onHover: (h
             <CrtScene mode="wall" tokens={tokens} progress={push} onHover={onHover} onPick={onPick} onFail={() => setFailed(true)} />
           </Suspense>
         )}
-      </motion.div>
-      <div aria-hidden className="crt-overlay pointer-events-none absolute inset-0" />
-      <motion.div style={{ y: lift }} className="pointer-events-none relative z-10 flex h-full flex-col items-center justify-between px-4 pb-24 pt-[7vh] text-center md:pb-16">
-        <motion.h1
-          initial={{ opacity: 0, filter: "blur(14px)", scale: 1.04 }}
-          animate={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
-          transition={{ duration: 1.1, ease: EASE }}
-          className="text-glow font-display text-[68px] leading-[0.9] font-[800] uppercase text-lime sm:text-[96px] lg:text-[128px]"
-        >
-          Start ahead.
-          <br />
-          Stay paid.
-        </motion.h1>
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5, ease: EASE }} className="flex flex-col items-center gap-5">
-          <span aria-hidden className="text-[30px] font-thin leading-none text-ink-2">
-            +
-          </span>
-          <p className="max-w-md text-[15px] leading-6 text-ink-2 md:text-[16px]">
-            Every buy lands with bonus tokens on top. Every holder is paid ETH from the trading, and paid more the longer they hold.
-          </p>
-          <div className="pointer-events-auto flex flex-wrap justify-center gap-3">
-            <Link to="/arcade" className={btn}>
-              Enter the arcade
-            </Link>
-            <Link to="/launch" className={btnGhost}>
-              Launch a token
-            </Link>
-          </div>
-          <span className="num hidden text-[11px] text-ink-3 pointer-fine:block">Point at a screen to tune in</span>
+        <div aria-hidden className="crt-overlay pointer-events-none absolute inset-0" />
+        <motion.div style={{ opacity: copy }} className="pointer-events-none relative z-10 flex h-full flex-col items-center justify-between px-4 pb-24 pt-[7vh] text-center md:pb-16">
+          <motion.h1
+            initial={{ opacity: 0, filter: "blur(14px)", scale: 1.04 }}
+            animate={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
+            transition={{ duration: 1.1, ease: EASE }}
+            className="text-glow font-display text-[68px] leading-[0.9] font-[800] uppercase text-lime sm:text-[96px] lg:text-[128px]"
+          >
+            Start ahead.
+            <br />
+            Stay paid.
+          </motion.h1>
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5, ease: EASE }} className="flex flex-col items-center gap-5">
+            <span aria-hidden className="text-[30px] font-thin leading-none text-ink-2">
+              +
+            </span>
+            <p className="max-w-md text-[15px] leading-6 text-ink-2 md:text-[16px]">
+              Every buy lands with bonus tokens on top. Every holder is paid ETH from the trading, and paid more the longer they hold.
+            </p>
+            <div className="pointer-events-auto flex flex-wrap justify-center gap-3">
+              <Link to="/arcade" className={btn}>
+                Enter the arcade
+              </Link>
+              <Link to="/launch" className={btnGhost}>
+                Launch a token
+              </Link>
+            </div>
+            <span className="num hidden text-[11px] text-ink-3 pointer-fine:block">Point at a screen to tune in</span>
+          </motion.div>
         </motion.div>
       </motion.div>
+      <motion.div aria-hidden style={{ opacity: leave.shade }} className="pointer-events-none absolute inset-0 z-20 bg-black" />
     </section>
   );
 }
@@ -264,17 +337,23 @@ function Marquee({ tokens }: { tokens: TokenSummary[] }) {
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
   const x = useTransform(scrollYProgress, [0, 1], ["3%", "-71%"]);
+  const { scrollYProgress: enter } = useScroll({ target: ref, offset: ["start end", "start start"] });
+  const glow = useTransform(enter, [0.35, 1], [0, 1]);
+  // the tube vignette waits until the room is pinned, or its dark rim would show as a seam over the hero
+  const tube = useTransform(enter, [0.8, 1], [0, 1]);
   return (
-    <section ref={ref} className="stage-dark relative h-[240vh] bg-[#0b0f0e]">
+    <section ref={ref} data-ch="Get more" className="stage-dark relative z-10 h-[240vh] bg-[#0b0f0e]">
+      {/* a soft lip instead of a hard edge where this room rides over the hero */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-40 h-40 bg-gradient-to-b from-transparent to-[#0b0f0e]" />
       <div className="sticky top-[100px] h-[calc(100svh-100px)] overflow-hidden">
-        <div aria-hidden className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-[#3d4e0b] via-[#18200a]/70 to-transparent" />
+        <motion.div aria-hidden style={{ opacity: glow }} className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-[#3d4e0b] via-[#18200a]/70 to-transparent [mask-image:linear-gradient(to_bottom,transparent,black_30%)]" />
         <motion.p style={{ x }} className="font-display relative mt-[5vh] w-max whitespace-nowrap text-[34vw] leading-[0.85] font-[800] text-ink/90 md:text-[24vw]">
           Buy it, get more. Hold it, get paid.
         </motion.p>
         {tokens.slice(0, 6).map((t, i) => (
           <Print key={t.address} t={t} i={i} p={scrollYProgress} />
         ))}
-        <div aria-hidden className="crt-overlay pointer-events-none absolute inset-0" />
+        <motion.div aria-hidden style={{ opacity: tube }} className="crt-overlay pointer-events-none absolute inset-0" />
       </div>
     </section>
   );
@@ -284,74 +363,86 @@ function Marquee({ tokens }: { tokens: TokenSummary[] }) {
 
 function NowPlaying({ tokens, onHover, onPick }: { tokens: TokenSummary[]; onHover: (h: Hover) => void; onPick: (to: string) => void }) {
   const list = tokens.slice(0, 8);
+  return list.length ? <NowPlayingRoom list={list} onHover={onHover} onPick={onPick} /> : null;
+}
+
+function NowPlayingRoom({ list, onHover, onPick }: { list: TokenSummary[]; onHover: (h: Hover) => void; onPick: (to: string) => void }) {
+  const ref = useRef<HTMLElement>(null);
+  const leave = useLeave(ref);
+  const arrive = useArrive(ref);
   const [i, setI] = useState(0);
   const [failed, setFailed] = useState(false);
   const step = (d: number) => setI((x) => (x + d + list.length) % list.length);
-  const t = list[i];
-  if (!t) return null;
+  const t = list[i]!;
   const tags = [`+${t.bonusBps / 100}% on top`, or(t.holders, (n) => `${n} holders`, "first holder wins"), t.paid ? `${eth(t.paid)} paid out` : t.pot ? `${eth(t.pot)} in the pot` : "pot filling", `${usd(t.fdvUsd)} cap`];
   const side = "pointer-events-auto absolute top-1/2 z-10 hidden h-10 -translate-y-1/2 items-center rounded-lg border px-4 text-[14px] transition-colors duration-150 md:inline-flex";
   return (
     <section
+      ref={ref}
+      data-ch="Now playing"
       className={cx(ROOM, "min-h-[680px] bg-[#090b07]")}
       onKeyDown={(e) => {
         if (e.key === "ArrowLeft") step(-1);
         if (e.key === "ArrowRight") step(1);
       }}
     >
-      {failed ? (
-        <div className="absolute inset-0 grid place-items-center bg-[linear-gradient(#3d4e0b,#090b07_45%)]">
-          <CssTv t={t} className="w-[min(70vw,460px)]" />
-        </div>
-      ) : (
-        <Suspense fallback={null}>
-          <CrtScene mode="feature" tokens={list} index={i} onStep={step} onPick={onPick} onHover={(h) => onHover(h && (h.to ? { label: `Play $${t.symbol}` } : h))} onFail={() => setFailed(true)} />
-        </Suspense>
-      )}
-      <PixelEdge from="#0b0f0e" />
-      <div aria-hidden className="crt-overlay pointer-events-none absolute inset-0" />
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/85 to-transparent" />
-      <button onClick={() => step(-1)} className={cx(side, "left-[7%] border-white/40 bg-black/40 text-ink backdrop-blur hover:bg-black/60")}>
-        Previous
-      </button>
-      <button onClick={() => step(1)} className={cx(side, "right-[7%] border-[var(--sticker-shadow)] bg-lime font-semibold text-lime-ink hover:brightness-110")}>
-        Next
-      </button>
-      <div className="pointer-events-none relative z-10 flex h-full flex-col items-center justify-between px-4 pb-20 pt-10 text-center md:pb-14">
-        <div>
-          <h2 className="font-display text-[60px] leading-none font-[800] text-ink md:text-[84px]">Now playing</h2>
-          <span className="num mt-3 block text-[13px] text-ink-2">
-            [ {two(i + 1)} / {two(list.length)} ]
-          </span>
-        </div>
-        <div className="flex flex-col items-center gap-4">
-          <AnimatePresence mode="wait">
-            <motion.div key={t.address} initial={{ opacity: 0, y: 10, filter: "blur(6px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(6px)" }} transition={{ duration: 0.3 }}>
-              <h3 className="font-display text-[44px] leading-none font-[800]">{t.name}</h3>
-              <div className="num mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[13px] text-ink-2">
-                {tags.map((x) => (
-                  <span key={x}>[ {x} ]</span>
-                ))}
-              </div>
-            </motion.div>
-          </AnimatePresence>
-          <div className="pointer-events-auto flex items-center gap-2">
-            <button onClick={() => step(-1)} aria-label="Previous token" className="grid size-11 place-items-center rounded-xl border border-white/35 bg-black/30 text-ink backdrop-blur md:hidden">
-              <ChevronLeft size={18} strokeWidth={1.5} />
-            </button>
-            <Link to={`/token/${t.address}`} className={btn}>
-              Play ${t.symbol}
-            </Link>
-            <Link to={`/token/${t.address}`} aria-label={`Open $${t.symbol}`} className={cx(btn, "px-3")}>
-              <ArrowRight size={18} strokeWidth={2} />
-            </Link>
-            <button onClick={() => step(1)} aria-label="Next token" className="grid size-11 place-items-center rounded-xl border border-white/35 bg-black/30 text-ink backdrop-blur md:hidden">
-              <ChevronRight size={18} strokeWidth={1.5} />
-            </button>
+      <motion.div style={{ y: leave.y, scale: leave.scale }} className="absolute inset-0 origin-top">
+        <motion.div style={{ scale: arrive }} className="absolute inset-0">
+          {failed ? (
+            <div className="absolute inset-0 grid place-items-center bg-[linear-gradient(#3d4e0b,#090b07_45%)]">
+              <CssTv t={t} className="w-[min(70vw,460px)]" />
+            </div>
+          ) : (
+            <Suspense fallback={null}>
+              <CrtScene mode="feature" tokens={list} index={i} onStep={step} onPick={onPick} onHover={(h) => onHover(h && (h.to ? { label: `Play $${t.symbol}` } : h))} onFail={() => setFailed(true)} />
+            </Suspense>
+          )}
+        </motion.div>
+        <PixelEdge from="#0b0f0e" />
+        <div aria-hidden className="crt-overlay pointer-events-none absolute inset-0" />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/85 to-transparent" />
+        <button onClick={() => step(-1)} className={cx(side, "left-[7%] border-white/40 bg-black/40 text-ink backdrop-blur hover:bg-black/60")}>
+          Previous
+        </button>
+        <button onClick={() => step(1)} className={cx(side, "right-[7%] border-[var(--sticker-shadow)] bg-lime font-semibold text-lime-ink hover:brightness-110")}>
+          Next
+        </button>
+        <div className="pointer-events-none relative z-10 flex h-full flex-col items-center justify-between px-4 pb-20 pt-10 text-center md:pb-14">
+          <div>
+            <Rise text="Now playing" className="font-display text-[60px] leading-none font-[800] text-ink md:text-[84px]" />
+            <span className="num mt-3 block text-[13px] text-ink-2">
+              [ {two(i + 1)} / {two(list.length)} ]
+            </span>
+          </div>
+          <div className="flex flex-col items-center gap-4">
+            <AnimatePresence mode="wait">
+              <motion.div key={t.address} initial={{ opacity: 0, y: 10, filter: "blur(6px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(6px)" }} transition={{ duration: 0.3 }}>
+                <h3 className="font-display text-[44px] leading-none font-[800]">{t.name}</h3>
+                <div className="num mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[13px] text-ink-2">
+                  {tags.map((x) => (
+                    <span key={x}>[ {x} ]</span>
+                  ))}
+                </div>
+              </motion.div>
+            </AnimatePresence>
+            <div className="pointer-events-auto flex items-center gap-2">
+              <button onClick={() => step(-1)} aria-label="Previous token" className="grid size-11 place-items-center rounded-xl border border-white/35 bg-black/30 text-ink backdrop-blur md:hidden">
+                <ChevronLeft size={18} strokeWidth={1.5} />
+              </button>
+              <Link to={`/token/${t.address}`} className={btn}>
+                Play ${t.symbol}
+              </Link>
+              <Link to={`/token/${t.address}`} aria-label={`Open $${t.symbol}`} className={cx(btn, "px-3")}>
+                <ArrowRight size={18} strokeWidth={2} />
+              </Link>
+              <button onClick={() => step(1)} aria-label="Next token" className="grid size-11 place-items-center rounded-xl border border-white/35 bg-black/30 text-ink backdrop-blur md:hidden">
+                <ChevronRight size={18} strokeWidth={1.5} />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-      <PixelEdge from="#000000" bottom />
+      </motion.div>
+      <motion.div aria-hidden style={{ opacity: leave.shade }} className="pointer-events-none absolute inset-0 z-20 bg-black" />
     </section>
   );
 }
@@ -409,7 +500,10 @@ function RuleCard({ r, i, pos, gap, onPick }: { r: (typeof RULES)[number]; i: nu
 }
 
 function HowItPays({ onHover }: { onHover: (h: Hover) => void }) {
-  const pos = useMotionValue(0);
+  // the reel starts a few cards back and spins to the first rule when it comes into view
+  const pos = useMotionValue(-3);
+  const reel = useRef<HTMLDivElement>(null);
+  const seen = useInView(reel, { once: true, amount: 0.5 });
   const [active, setActive] = useState(0);
   const [gap, setGap] = useState(250);
   const drag = useRef<{ x: number; p: number; t: number; v: number; moved: number } | null>(null);
@@ -423,6 +517,9 @@ function HowItPays({ onHover }: { onHover: (h: Hover) => void }) {
     return () => q.removeEventListener("change", f);
   }, []);
   const go = (to: number) => void animate(pos, to, { type: "spring", stiffness: 240, damping: 30 });
+  useEffect(() => {
+    if (seen) void animate(pos, 0, { type: "spring", stiffness: 60, damping: 18 });
+  }, [seen, pos]);
   const onDown = (e: ReactPointerEvent) => {
     pos.stop();
     drag.current = { x: e.clientX, p: pos.get(), t: performance.now(), v: 0, moved: 0 };
@@ -447,9 +544,10 @@ function HowItPays({ onHover }: { onHover: (h: Hover) => void }) {
   };
   const r = RULES[active]!;
   return (
-    <section className="stage-dark relative isolate overflow-hidden bg-black px-4 pb-24 pt-20">
+    <section data-ch="How it pays" className="stage-dark relative isolate z-10 overflow-x-clip bg-black px-4 pb-24 pt-20">
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-40 h-40 bg-gradient-to-b from-transparent to-black" />
       <div className="text-center">
-        <h2 className="font-display text-[60px] leading-none font-[800] md:text-[84px]">How the game pays</h2>
+        <Rise text="How the game pays" className="font-display text-[60px] leading-none font-[800] md:text-[84px]" />
         <div className="num mt-3 flex items-center justify-center gap-3 text-[13px] text-ink-2">
           <button onClick={() => go(Math.round(pos.get()) - 1)} aria-label="Previous rule" className="grid size-8 place-items-center rounded-lg hover:bg-white/10">
             <ChevronLeft size={16} strokeWidth={1.5} />
@@ -461,6 +559,7 @@ function HowItPays({ onHover }: { onHover: (h: Hover) => void }) {
         </div>
       </div>
       <div
+        ref={reel}
         onPointerDown={onDown}
         onPointerMove={onMove}
         onPointerUp={onUp}
@@ -506,7 +605,7 @@ function Pitch() {
   const blur = useTransform(scrollYProgress, [0, 0.4, 1], ["blur(6px)", "blur(1px)", "blur(3px)"]);
   const words = useMemo(() => PITCH.split(" "), []);
   return (
-    <section ref={ref} className="stage-dark relative h-[200vh] bg-black">
+    <section ref={ref} data-ch="The pitch" className="stage-dark relative h-[200vh] bg-black">
       <div className="sticky top-[100px] flex h-[calc(100svh-100px)] items-center px-4 md:px-[8%]">
         <motion.span aria-hidden style={{ filter: blur }} className="font-display absolute left-[4%] top-1/2 hidden -translate-y-1/2 text-[64px] font-[800] text-ink/45 lg:block">
           The pitch
@@ -599,22 +698,26 @@ function BigStat({ label, value, format, empty }: { label: string; value: number
 function Receipts({ house, ethUsd }: { house?: TokenSummary; ethUsd: number }) {
   const { data: s } = useStats();
   return (
-    <section className="relative px-4 pb-24 pt-40 md:px-6">
+    <section data-ch="Receipts" className="relative px-4 pb-24 pt-40 md:px-6">
       <PixelEdge from="#000000" />
       <div className="relative z-10 grid gap-12 lg:grid-cols-[1.2fr_1fr] lg:items-center">
         <div>
           <span className="num text-[13px] text-ink-3">[ the receipts ]</span>
-          <h2 className="font-display mt-3 text-[60px] leading-[0.9] font-[800] md:text-[88px]">
-            Every number,
-            <br />
-            on-chain.
-          </h2>
-          <div className="mt-10 grid grid-cols-2 gap-x-6 gap-y-8">
-            <BigStat label="tokens launched" value={s?.tokens ?? 0} format={(v) => Math.round(v).toString()} empty="First launch pending" />
-            <BigStat label="bonus paid on buys" value={s?.bonusUsd ?? 0} format={usd} empty="Waiting on the first buy" />
-            <BigStat label="paid to holders" value={s?.paid ?? 0} format={(v) => eth(v)} empty="First round filling" />
-            <BigStat label="trades" value={s?.trades ?? 0} format={(v) => Math.round(v).toLocaleString("en-US")} empty="Market opens with the first buy" />
-          </div>
+          <Rise text={"Every number,\non-chain."} className="font-display mt-3 text-[60px] leading-[0.9] font-[800] md:text-[88px]" />
+          <motion.div initial="hide" whileInView="show" viewport={{ once: true, margin: "0px 0px -10% 0px" }} variants={STAGGER} className="mt-10 grid grid-cols-2 gap-x-6 gap-y-8">
+            <motion.div variants={LIFT}>
+              <BigStat label="tokens launched" value={s?.tokens ?? 0} format={(v) => Math.round(v).toString()} empty="First launch pending" />
+            </motion.div>
+            <motion.div variants={LIFT}>
+              <BigStat label="bonus paid on buys" value={s?.bonusUsd ?? 0} format={usd} empty="Waiting on the first buy" />
+            </motion.div>
+            <motion.div variants={LIFT}>
+              <BigStat label="paid to holders" value={s?.paid ?? 0} format={(v) => eth(v)} empty="First round filling" />
+            </motion.div>
+            <motion.div variants={LIFT}>
+              <BigStat label="trades" value={s?.trades ?? 0} format={(v) => Math.round(v).toLocaleString("en-US")} empty="Market opens with the first buy" />
+            </motion.div>
+          </motion.div>
           {s && (
             <p className="num mt-6 text-[12px] text-ink-3">
               Indexed to block {s.indexed.toLocaleString("en-US")} · {s.head - s.indexed < 120 ? "live" : "catching up"} · last trade {s.lastTradeAt ? ago(s.lastTradeAt) : "pending"}
@@ -624,7 +727,9 @@ function Receipts({ house, ethUsd }: { house?: TokenSummary; ethUsd: number }) {
             <WalletCheck />
           </div>
         </div>
-        <QuoteCard token={house} ethUsd={ethUsd} />
+        <motion.div initial={{ opacity: 0, x: 60, rotate: 2 }} whileInView={{ opacity: 1, x: 0, rotate: 0 }} viewport={{ once: true, margin: "0px 0px -10% 0px" }} transition={{ duration: 0.8, ease: EASE }}>
+          <QuoteCard token={house} ethUsd={ethUsd} />
+        </motion.div>
       </div>
     </section>
   );
@@ -642,9 +747,9 @@ const FLOW = [
 
 function PressBuy() {
   return (
-    <section className="px-4 py-24 md:px-6">
+    <section data-ch="Press buy" className="px-4 py-24 md:px-6">
       <span className="num text-[13px] text-ink-3">[ one transaction, four contracts ]</span>
-      <h2 className="font-display mt-3 text-[56px] leading-[0.9] font-[800] md:text-[80px]">What happens when you press buy</h2>
+      <Rise text="What happens when you press buy" className="font-display mt-3 text-[56px] leading-[0.9] font-[800] md:text-[80px]" />
       <div className="mt-12 grid gap-4 lg:grid-cols-5">
         {FLOW.map(([k, v], i) => (
           <motion.div
@@ -661,23 +766,23 @@ function PressBuy() {
           </motion.div>
         ))}
       </div>
-      <div className="mt-4 grid gap-4 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
-        <div className="rounded-2xl border border-line bg-card p-5">
+      <motion.div initial="hide" whileInView="show" viewport={{ once: true, margin: "0px 0px -8% 0px" }} variants={STAGGER} className="mt-4 grid gap-4 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        <motion.div variants={LIFT} className="rounded-2xl border border-line bg-card p-5">
           <span className="num text-[13px]">Then the pool fee splits</span>
           <p className="mt-2 text-[13px] text-ink-2">Fees accrue to the position OnTopLaunchpad owns. Token-side fees refill the bonus treasury and the excess burns.</p>
-        </div>
+        </motion.div>
         {[
           [`${HOLDERS_BPS / 100}%`, "Holders", "pushed in ETH rounds"],
           [`${CREATOR_BPS / 100}%`, "Creator", "claimable any time"],
           [`${PLATFORM_BPS / 100}%`, "Platform", "keeps the lights on"],
         ].map(([p, k, s], i) => (
-          <div key={k} className={cx("flex flex-col gap-1 rounded-2xl border p-5", i === 0 ? "border-[var(--accent)]" : "border-line", "bg-card")}>
+          <motion.div key={k} variants={LIFT} className={cx("flex flex-col gap-1 rounded-2xl border p-5", i === 0 ? "border-[var(--accent)]" : "border-line", "bg-card")}>
             <span className={cx("font-display text-[52px] leading-none font-[800]", i === 0 && "text-accent")}>{p}</span>
             <span className="text-[14px]">{k}</span>
             <span className="text-[12px] text-ink-3">{s}</span>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </section>
   );
 }
@@ -723,27 +828,27 @@ function Flicker({ text, seed }: { text: string; seed: number }) {
 }
 
 function Close({ tokens, onHover, onPick }: { tokens: TokenSummary[]; onHover: (h: Hover) => void; onPick: (to: string) => void }) {
+  const ref = useRef<HTMLElement>(null);
+  const arrive = useArrive(ref);
   const [failed, setFailed] = useState(false);
   return (
-    <section className={cx(ROOM, "bg-[#0a0e0e]")}>
-      {failed ? (
-        <div className="absolute right-[-8%] top-1/2 w-[58%] -translate-y-1/2 rotate-[-5deg] max-md:hidden">
-          <CssTv />
-        </div>
-      ) : (
-        <Suspense fallback={null}>
-          <CrtScene mode="cta" tokens={tokens} onHover={onHover} onPick={onPick} onFail={() => setFailed(true)} />
-        </Suspense>
-      )}
+    <section ref={ref} data-ch="Insert coin" className={cx(ROOM, "bg-[#0a0e0e]")}>
+      <motion.div style={{ scale: arrive }} className="absolute inset-0">
+        {failed ? (
+          <div className="absolute right-[-8%] top-1/2 w-[58%] -translate-y-1/2 rotate-[-5deg] max-md:hidden">
+            <CssTv />
+          </div>
+        ) : (
+          <Suspense fallback={null}>
+            <CrtScene mode="cta" tokens={tokens} onHover={onHover} onPick={onPick} onFail={() => setFailed(true)} />
+          </Suspense>
+        )}
+      </motion.div>
       <PixelEdge from="--bg" />
       <div aria-hidden className="crt-overlay pointer-events-none absolute inset-0" />
       <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 to-transparent md:hidden" />
       <div className="pointer-events-none relative z-10 flex h-full flex-col justify-end px-4 pb-24 md:justify-center md:px-[6%] md:pb-0">
-        <h2 className="font-display text-[60px] leading-[0.9] font-[800] md:text-[104px]">
-          <Flicker text="Got a token" seed={3} />
-          <br />
-          <Flicker text="in mind?" seed={7} />
-        </h2>
+        <Rise text={"Got a token\nin mind?"} flicker className="font-display text-[60px] leading-[0.9] font-[800] md:text-[104px]" />
         <p className="mt-4 text-[20px] text-ink-2 md:text-[24px]">Launch it in one transaction.</p>
         <div className="mt-6 h-px w-full max-w-md bg-white/20" />
         <div className="pointer-events-auto mt-6 flex flex-wrap gap-3">
@@ -773,10 +878,16 @@ export default function Home() {
     setPill(null);
     nav(to);
   };
+  // the landing scrolls on rails: wheel input eases instead of jumping. Touch keeps native momentum.
+  useEffect(() => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const lenis = new Lenis({ autoRaf: true, lerp: 0.085 });
+    return () => lenis.destroy();
+  }, []);
 
   return (
     <div>
-      <Hud />
+      <Hud ready={list.length > 0} />
       <CursorPill label={pill} />
       <Hero tokens={list} onHover={onHover} onPick={onPick} />
       <Marquee tokens={list} />
@@ -786,28 +897,30 @@ export default function Home() {
       <Receipts house={house} ethUsd={cfg?.ethUsd ?? 0} />
       <PressBuy />
 
-      <section className="px-4 py-24 md:px-6">
+      <section data-ch="The machines" className="px-4 py-24 md:px-6">
         <span className="num text-[13px] text-ink-3">[ verified source ]</span>
-        <h2 className="font-display mb-10 mt-3 text-[56px] leading-[0.9] font-[800] md:text-[80px]">The machines behind every number</h2>
-        <ContractsTable />
+        <Rise text="The machines behind every number" className="font-display mb-10 mt-3 text-[56px] leading-[0.9] font-[800] md:text-[80px]" />
+        <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "0px 0px -10% 0px" }} transition={{ duration: 0.7, ease: EASE }}>
+          <ContractsTable />
+        </motion.div>
       </section>
 
-      <section className="grid gap-8 px-4 pb-40 pt-24 md:px-6 lg:grid-cols-[1fr_1.4fr]">
+      <section data-ch="Answers" className="grid gap-8 px-4 pb-40 pt-24 md:px-6 lg:grid-cols-[1fr_1.4fr]">
         <div>
           <span className="num text-[13px] text-ink-3">[ straight answers ]</span>
-          <h2 className="font-display mt-3 text-[52px] leading-[0.9] font-[800] md:text-[64px]">The questions every degen asks first</h2>
+          <Rise text="The questions every degen asks first" className="font-display mt-3 text-[52px] leading-[0.9] font-[800] md:text-[64px]" />
         </div>
-        <div className="flex flex-col">
+        <motion.div initial="hide" whileInView="show" viewport={{ once: true, margin: "0px 0px -10% 0px" }} variants={STAGGER} className="flex flex-col">
           {FAQ.map((f) => (
-            <details key={f.q} className="group border-b border-line py-5">
+            <motion.details key={f.q} variants={LIFT} className="group border-b border-line py-5">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[17px] font-medium">
                 {f.q}
                 <span className="num text-[20px] text-ink-3 transition-transform duration-200 group-open:rotate-45">+</span>
               </summary>
               <p className="mt-3 max-w-2xl text-[14px] leading-6 text-ink-2">{f.a}</p>
-            </details>
+            </motion.details>
           ))}
-        </div>
+        </motion.div>
       </section>
 
       <Close tokens={list} onHover={onHover} onPick={onPick} />
