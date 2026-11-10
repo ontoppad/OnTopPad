@@ -55,7 +55,7 @@ apps/web          Vite + React app (landing, arcade, token pages, launch wizard,
 apps/api          Indexer + REST API + payout keeper (Node, Hono, SQLite, viem)
 packages/shared   Chain config, ABIs, fee/tier math shared by web and api
 contracts         Foundry project: OnTopLaunchpad, OnTopHook, OnTopRouter, OnTopDistributor, OnTopToken
-infra             VPS provisioning, nginx, systemd, deploy script
+infra             systemd unit, Traefik route, VPS setup and deploy script
 ```
 
 Branches: `main` (development), `testnet` (what runs on testnet.ontoppad.com), `mainnet` (what runs on ontoppad.com).
@@ -83,12 +83,15 @@ cd .. && pnpm contracts:sync           # copies ABIs + addresses into packages/s
 
 ## Deploy
 
+The VPS is shared and fronted by Coolify's Traefik proxy, which owns ports 80/443 and issues TLS certificates.
+Each network runs as one `ontoppad@<network>` systemd service (API, indexer, payout keeper and the built web app)
+bound to the docker bridge, routed by `infra/traefik/ontoppad.yaml`.
+
 ```bash
-infra/provision.sh                     # once, on the VPS
-infra/deploy.sh testnet                # builds locally, ships dist + api bundle, issues TLS, restarts
+infra/deploy.sh testnet                # builds locally, ships web + api bundle, writes service env, restarts
 ```
 
-Secrets live in `.secrets/` (git-ignored) and are written to the server as a root-only env file.
+Secrets live in `.secrets/` (git-ignored) and reach the server only as a root-only env file over SSH stdin.
 
 ## License
 

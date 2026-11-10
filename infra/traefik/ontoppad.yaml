@@ -1,0 +1,30 @@
+# Copied to /data/coolify/proxy/dynamic/ontoppad.yaml on the VPS. The Coolify Traefik proxy owns ports 80/443,
+# issues Let's Encrypt certificates and reaches the host-side ontoppad@<network> service via host.docker.internal.
+http:
+  routers:
+    ontoppad-testnet-http:
+      rule: Host(`testnet.ontoppad.com`)
+      entryPoints: [http]
+      middlewares: [ontoppad-https]
+      service: ontoppad-testnet
+    ontoppad-testnet:
+      rule: Host(`testnet.ontoppad.com`)
+      entryPoints: [https]
+      service: ontoppad-testnet
+      middlewares: [ontoppad-headers]
+      tls:
+        certResolver: letsencrypt
+  middlewares:
+    ontoppad-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+    ontoppad-headers:
+      headers:
+        stsSeconds: 31536000
+        contentTypeNosniff: true
+  services:
+    ontoppad-testnet:
+      loadBalancer:
+        servers:
+          - url: http://host.docker.internal:3501

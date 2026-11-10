@@ -1,0 +1,25 @@
+# /etc/systemd/system/ontoppad@.service — one process per network (%i = testnet | mainnet):
+# REST API, indexer, payout keeper and the built web app. Bound to docker0 so only the
+# Coolify Traefik proxy reaches it; Traefik terminates TLS (see infra/traefik/ontoppad.yaml).
+[Unit]
+Description=ONTOPPAD (%i)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+User=ontop
+Group=ontop
+WorkingDirectory=/opt/ontoppad/%i
+EnvironmentFile=/opt/ontoppad/%i/service.env
+ExecStart=/usr/bin/node /opt/ontoppad/%i/api/server.mjs
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/ontoppad/%i/data
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target

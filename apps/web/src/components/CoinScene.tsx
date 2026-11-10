@@ -72,11 +72,11 @@ export default function CoinScene({ onFlip }: { onFlip?: () => void }) {
 
     const faceMat = new THREE.MeshStandardMaterial({ map: faceTex, metalness: 0.35, roughness: 0.42 });
     const edgeMat = new THREE.MeshStandardMaterial({ map: edgeTex, metalness: 0.7, roughness: 0.3 });
-    const coin = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.24, 128, 1), [edgeMat, faceMat, faceMat]);
+    const coin = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 0.22, 128, 1), [edgeMat, faceMat, faceMat]);
     coin.rotation.x = Math.PI / 2;
     const pivot = new THREE.Group();
     pivot.add(coin);
-    pivot.position.y = 1.15;
+    pivot.position.y = 1.0;
     scene.add(pivot);
 
     // ── dotted globe, like the Robinhood Chain world on the banner

@@ -1,6 +1,8 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { secureHeaders } from "hono/secure-headers";
 import { serve } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { readFile } from "node:fs/promises";
 import { isAddress } from "viem";
 import { MAX_BONUS_BPS, MIN_BONUS_BPS, SUPPLY, TREASURY_BPS, HOLDERS_BPS, CREATOR_BPS, PLATFORM_BPS, TIERS } from "@ontoppad/shared";
@@ -135,8 +137,27 @@ app.onError((e, c) => {
   return c.json({ error: "internal error" }, 500);
 });
 
-serve({ fetch: app.fetch, port: config.port, hostname: "127.0.0.1" }, () =>
-  console.log(`[api] ${network.label} on :${config.port}`),
+// one process per network: the API plus, in production, the built web app (Traefik terminates TLS in front)
+const root = new Hono();
+root.use("*", secureHeaders({ crossOriginEmbedderPolicy: false, crossOriginResourcePolicy: false, crossOriginOpenerPolicy: false }));
+root.route("/", app);
+if (config.webDir) {
+  const web = config.webDir;
+  root.use("/assets/*", async (c, next) => {
+    await next();
+    c.header("cache-control", "public, max-age=31536000, immutable");
+  });
+  // the app shell is never cached, so a deploy shows up on the next load
+  root.use("*", async (c, next) => {
+    await next();
+    if (c.res.headers.get("content-type")?.startsWith("text/html")) c.header("cache-control", "no-cache");
+  });
+  root.use("*", serveStatic({ root: web }));
+  root.get("*", serveStatic({ path: `${web}/index.html` })); // SPA fallback
+}
+
+serve({ fetch: root.fetch, port: config.port, hostname: config.host }, () =>
+  console.log(`[api] ${network.label} on ${config.host}:${config.port}${config.webDir ? " (serving web)" : ""}`),
 );
 runPriceFeed();
 void runIndexer();

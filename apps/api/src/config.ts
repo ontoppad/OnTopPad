@@ -4,6 +4,8 @@ const env = process.env;
 export const network = getNetwork(env.NETWORK ?? "testnet");
 export const config = {
   port: Number(env.PORT ?? 8787),
+  host: env.HOST ?? "127.0.0.1",
+  webDir: env.WEB_DIR,
   dataDir: env.DATA_DIR ?? "./data",
   publicUrl: env.PUBLIC_URL ?? network.appUrl,
   rpcUrl: env.RPC_URL || network.chain.rpcUrls.default.http[0],
