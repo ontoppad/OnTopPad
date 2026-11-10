@@ -290,7 +290,8 @@ function Boot({ onDone }: { onDone: () => void }) {
         />
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.8, duration: 0.5 }} className="flex flex-col items-center gap-2">
           <h1 className="glitch font-title text-[44px] leading-none text-lime md:text-[84px]">ONTOPPAD</h1>
-          <p className="num text-[11px] tracking-[0.2em] text-ink-2 md:text-[13px]">GAME STATION · START AHEAD. STAY PAID.</p>
+          <p className="num text-[11px] tracking-[0.2em] text-ink-2 md:text-[13px]">START AHEAD. STAY PAID.</p>
+          <p className="num text-[10px] tracking-[0.2em] text-ink-3 md:text-[11px]">LIVE ON ROBINHOOD CHAIN</p>
         </motion.div>
 
         <div aria-live="polite" className="num min-h-[9.5rem] w-full max-w-md rounded-xl border border-white/10 bg-black/50 p-4 text-[11px] leading-6 text-ink-2 md:text-[12px]">
