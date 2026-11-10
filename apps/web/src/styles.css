@@ -2,6 +2,7 @@
 @import "@fontsource-variable/bricolage-grotesque";
 @import "@fontsource-variable/jetbrains-mono";
 @import "@fontsource-variable/big-shoulders-inline";
+@import "@fontsource/bungee";
 @import "lenis/dist/lenis.css";
 
 /* Arcade-at-night ramp: near-black with a faint olive cast from the logo's lime spill.
@@ -68,6 +69,8 @@
   --color-down-ink: var(--down-ink);
   --font-sans: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+  /* titles: chunky arcade marquee caps; display: the condensed scoreboard digits */
+  --font-title: "Bungee", "Bricolage Grotesque Variable", sans-serif;
   --font-display: "Big Shoulders Inline Variable", "Bricolage Grotesque Variable", sans-serif;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }

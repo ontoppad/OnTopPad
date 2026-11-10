@@ -174,7 +174,7 @@ export default function Rules() {
       </section>
 
       <section className="flex flex-col items-center gap-4 px-4 py-16 text-center">
-        <h2 className="font-display text-[44px] leading-[0.95] font-[800] md:text-[56px]">Rules read. Time to play.</h2>
+        <h2 className="font-title text-[26px] leading-[1.1] md:text-[34px]">Rules read. Time to play.</h2>
         <p className="max-w-lg text-[15px] text-ink-2">Pick a token from the board, or launch your own with the bonus rate you want</p>
         <div className="flex flex-wrap justify-center gap-3">
           <Link to="/arcade" className={pill}>

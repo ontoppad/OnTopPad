@@ -162,7 +162,7 @@ export default function Token() {
   if (error)
     return (
       <div className="mx-auto flex max-w-xl flex-col items-center gap-4 px-4 py-24 text-center">
-        <p className="font-display text-[44px] leading-[0.95] font-[800]">This address isn't an OnTop launch</p>
+        <p className="font-title text-[26px] leading-[1.1]">This address isn't an OnTop launch</p>
         <ButtonLink to="/arcade" variant="secondary">
           Back to the arcade
         </ButtonLink>
@@ -190,7 +190,7 @@ export default function Token() {
               </motion.div>
               <div className="flex min-w-0 flex-col gap-2">
                 <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="font-display text-[48px] leading-[0.9] font-[800] md:text-[80px]">{t.name}</h1>
+                  <h1 className="font-title text-[30px] leading-none md:text-[48px]">{t.name}</h1>
                   <span className="num text-[16px] text-ink-2">${t.symbol}</span>
                   <Stamp bps={t.bonusBps} />
                 </div>

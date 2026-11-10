@@ -277,7 +277,7 @@ function Hero({ tokens, onHover, onPick }: { tokens: TokenSummary[]; onHover: (h
             initial={{ opacity: 0, filter: "blur(14px)", scale: 1.04 }}
             animate={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
             transition={{ duration: 1.1, ease: EASE }}
-            className="text-glow font-display text-[68px] leading-[0.9] font-[800] uppercase text-lime sm:text-[96px] lg:text-[128px]"
+            className="text-glow font-title text-[34px] leading-[1.05] text-lime sm:text-[60px] lg:text-[88px]"
           >
             Start ahead.
             <br />
@@ -347,7 +347,7 @@ function Marquee({ tokens }: { tokens: TokenSummary[] }) {
       <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-40 h-40 bg-gradient-to-b from-transparent to-[#0b0f0e]" />
       <div className="sticky top-[100px] h-[calc(100svh-100px)] overflow-hidden">
         <motion.div aria-hidden style={{ opacity: glow }} className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-[#3d4e0b] via-[#18200a]/70 to-transparent [mask-image:linear-gradient(to_bottom,transparent,black_30%)]" />
-        <motion.p style={{ x }} className="font-display relative mt-[5vh] w-max whitespace-nowrap text-[34vw] leading-[0.85] font-[800] text-ink/90 md:text-[24vw]">
+        <motion.p style={{ x }} className="font-title relative mt-[6vh] w-max whitespace-nowrap text-[22vw] leading-[0.95] text-ink/90 md:text-[15vw]">
           Buy it, get more. Hold it, get paid.
         </motion.p>
         {tokens.slice(0, 6).map((t, i) => (
@@ -409,7 +409,7 @@ function NowPlayingRoom({ list, onHover, onPick }: { list: TokenSummary[]; onHov
         </button>
         <div className="pointer-events-none relative z-10 flex h-full flex-col items-center justify-between px-4 pb-20 pt-10 text-center md:pb-14">
           <div>
-            <Rise text="Now playing" className="font-display text-[60px] leading-none font-[800] text-ink md:text-[84px]" />
+            <Rise text="Now playing" className="font-title text-[36px] leading-none text-ink md:text-[60px]" />
             <span className="num mt-3 block text-[13px] text-ink-2">
               [ {two(i + 1)} / {two(list.length)} ]
             </span>
@@ -417,7 +417,7 @@ function NowPlayingRoom({ list, onHover, onPick }: { list: TokenSummary[]; onHov
           <div className="flex flex-col items-center gap-4">
             <AnimatePresence mode="wait">
               <motion.div key={t.address} initial={{ opacity: 0, y: 10, filter: "blur(6px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(6px)" }} transition={{ duration: 0.3 }}>
-                <h3 className="font-display text-[44px] leading-none font-[800]">{t.name}</h3>
+                <h3 className="font-title text-[26px] leading-none md:text-[34px]">{t.name}</h3>
                 <div className="num mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[13px] text-ink-2">
                   {tags.map((x) => (
                     <span key={x}>[ {x} ]</span>
@@ -547,7 +547,7 @@ function HowItPays({ onHover }: { onHover: (h: Hover) => void }) {
     <section data-ch="How it pays" className="stage-dark relative isolate z-10 overflow-x-clip bg-black px-4 pb-24 pt-20">
       <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-40 h-40 bg-gradient-to-b from-transparent to-black" />
       <div className="text-center">
-        <Rise text="How the game pays" className="font-display text-[60px] leading-none font-[800] md:text-[84px]" />
+        <Rise text="How the game pays" className="font-title text-[34px] leading-[1.05] md:text-[60px]" />
         <div className="num mt-3 flex items-center justify-center gap-3 text-[13px] text-ink-2">
           <button onClick={() => go(Math.round(pos.get()) - 1)} aria-label="Previous rule" className="grid size-8 place-items-center rounded-lg hover:bg-white/10">
             <ChevronLeft size={16} strokeWidth={1.5} />
@@ -575,7 +575,7 @@ function HowItPays({ onHover }: { onHover: (h: Hover) => void }) {
       </div>
       <AnimatePresence mode="wait">
         <motion.div key={r.name} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22 }} className="mt-14 text-center">
-          <h3 className="font-display text-[40px] leading-none font-[800]">{r.name}</h3>
+          <h3 className="font-title text-[22px] leading-tight md:text-[30px]">{r.name}</h3>
           <div className="num mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[13px] text-ink-2">
             {r.tags.map((x) => (
               <span key={x}>[ {x} ]</span>
@@ -607,7 +607,7 @@ function Pitch() {
   return (
     <section ref={ref} data-ch="The pitch" className="stage-dark relative h-[200vh] bg-black">
       <div className="sticky top-[100px] flex h-[calc(100svh-100px)] items-center px-4 md:px-[8%]">
-        <motion.span aria-hidden style={{ filter: blur }} className="font-display absolute left-[4%] top-1/2 hidden -translate-y-1/2 text-[64px] font-[800] text-ink/45 lg:block">
+        <motion.span aria-hidden style={{ filter: blur }} className="font-title absolute left-[4%] top-1/2 hidden -translate-y-1/2 text-[44px] text-ink/45 lg:block">
           The pitch
         </motion.span>
         <p className="mx-auto max-w-[780px] text-[26px] leading-[1.35] font-medium tracking-tight text-ink md:text-[36px] lg:ml-[34%] lg:max-w-[640px]">
@@ -703,7 +703,7 @@ function Receipts({ house, ethUsd }: { house?: TokenSummary; ethUsd: number }) {
       <div className="relative z-10 grid gap-12 lg:grid-cols-[1.2fr_1fr] lg:items-center">
         <div>
           <span className="num text-[13px] text-ink-3">[ the receipts ]</span>
-          <Rise text={"Every number,\non-chain."} className="font-display mt-3 text-[60px] leading-[0.9] font-[800] md:text-[88px]" />
+          <Rise text={"Every number,\non-chain."} className="font-title mt-3 text-[38px] leading-[1.02] md:text-[64px]" />
           <motion.div initial="hide" whileInView="show" viewport={{ once: true, margin: "0px 0px -10% 0px" }} variants={STAGGER} className="mt-10 grid grid-cols-2 gap-x-6 gap-y-8">
             <motion.div variants={LIFT}>
               <BigStat label="tokens launched" value={s?.tokens ?? 0} format={(v) => Math.round(v).toString()} empty="First launch pending" />
@@ -749,7 +749,7 @@ function PressBuy() {
   return (
     <section data-ch="Press buy" className="px-4 py-24 md:px-6">
       <span className="num text-[13px] text-ink-3">[ one transaction, four contracts ]</span>
-      <Rise text="What happens when you press buy" className="font-display mt-3 text-[56px] leading-[0.9] font-[800] md:text-[80px]" />
+      <Rise text="What happens when you press buy" className="font-title mt-3 text-[32px] leading-[1.05] md:text-[56px]" />
       <div className="mt-12 grid gap-4 lg:grid-cols-5">
         {FLOW.map(([k, v], i) => (
           <motion.div
@@ -848,7 +848,7 @@ function Close({ tokens, onHover, onPick }: { tokens: TokenSummary[]; onHover: (
       <div aria-hidden className="crt-overlay pointer-events-none absolute inset-0" />
       <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 to-transparent md:hidden" />
       <div className="pointer-events-none relative z-10 flex h-full flex-col justify-end px-4 pb-24 md:justify-center md:px-[6%] md:pb-0">
-        <Rise text={"Got a token\nin mind?"} flicker className="font-display text-[60px] leading-[0.9] font-[800] md:text-[104px]" />
+        <Rise text={"Got a token\nin mind?"} flicker className="font-title text-[38px] leading-[1.02] md:text-[72px]" />
         <p className="mt-4 text-[20px] text-ink-2 md:text-[24px]">Launch it in one transaction.</p>
         <div className="mt-6 h-px w-full max-w-md bg-white/20" />
         <div className="pointer-events-auto mt-6 flex flex-wrap gap-3">
@@ -899,7 +899,7 @@ export default function Home() {
 
       <section data-ch="The machines" className="px-4 py-24 md:px-6">
         <span className="num text-[13px] text-ink-3">[ verified source ]</span>
-        <Rise text="The machines behind every number" className="font-display mb-10 mt-3 text-[56px] leading-[0.9] font-[800] md:text-[80px]" />
+        <Rise text="The machines behind every number" className="font-title mb-10 mt-3 text-[32px] leading-[1.05] md:text-[56px]" />
         <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "0px 0px -10% 0px" }} transition={{ duration: 0.7, ease: EASE }}>
           <ContractsTable />
         </motion.div>
@@ -908,7 +908,7 @@ export default function Home() {
       <section data-ch="Answers" className="grid gap-8 px-4 pb-40 pt-24 md:px-6 lg:grid-cols-[1fr_1.4fr]">
         <div>
           <span className="num text-[13px] text-ink-3">[ straight answers ]</span>
-          <Rise text="The questions every degen asks first" className="font-display mt-3 text-[52px] leading-[0.9] font-[800] md:text-[64px]" />
+          <Rise text="The questions every degen asks first" className="font-title mt-3 text-[30px] leading-[1.05] md:text-[44px]" />
         </div>
         <motion.div initial="hide" whileInView="show" viewport={{ once: true, margin: "0px 0px -10% 0px" }} variants={STAGGER} className="flex flex-col">
           {FAQ.map((f) => (
