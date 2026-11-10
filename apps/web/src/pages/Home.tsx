@@ -11,6 +11,7 @@ import { ago, amount, eth, or, usd } from "../lib/format.ts";
 import { Art } from "../components/TokenCard.tsx";
 import { ContractsTable } from "../components/Contracts.tsx";
 import { cx, Segmented, Skeleton, SkeletonLine, Stamp, TokenArt, useTween } from "../components/ui.tsx";
+import { ENTER_EVENT, splashDue } from "../components/Splash.tsx";
 import type { Hover } from "../components/CrtScene.tsx";
 
 const CrtScene = lazy(() => import("../components/CrtScene.tsx"));
@@ -253,6 +254,18 @@ const LIFT = { hide: { opacity: 0, y: 28 }, show: { opacity: 1, y: 0, transition
 
 // ───────────── 1 · the wall ─────────────
 
+/** On a first visit the title waits for the splash's portal to open, so it assembles as you arrive. */
+function useArrived() {
+  const [go, setGo] = useState(() => !splashDue());
+  useEffect(() => {
+    if (go) return;
+    const on = () => setGo(true);
+    addEventListener(ENTER_EVENT, on);
+    return () => removeEventListener(ENTER_EVENT, on);
+  }, [go]);
+  return go;
+}
+
 function Hero({ tokens, onHover, onPick }: { tokens: TokenSummary[]; onHover: (h: Hover) => void; onPick: (to: string) => void }) {
   const ref = useRef<HTMLElement>(null);
   const leave = useLeave(ref);
@@ -260,6 +273,7 @@ function Hero({ tokens, onHover, onPick }: { tokens: TokenSummary[]; onHover: (h
   useMotionValueEvent(leave.p, "change", (v) => (push.current = v));
   const copy = useTransform(leave.p, [0, 0.55], [1, 0]);
   const [failed, setFailed] = useState(false);
+  const arrived = useArrived();
   return (
     <section ref={ref} data-ch="Start ahead" className={cx(ROOM, "bg-[#0b0f0e]")}>
       <motion.div style={{ y: leave.y, scale: leave.scale }} className="absolute inset-0 origin-top">
@@ -274,7 +288,7 @@ function Hero({ tokens, onHover, onPick }: { tokens: TokenSummary[]; onHover: (h
         <motion.div style={{ opacity: copy }} className="pointer-events-none relative z-10 flex h-full flex-col items-center justify-between px-4 pb-24 pt-[7vh] text-center md:pb-16">
           <motion.h1
             initial={{ opacity: 0, filter: "blur(14px)", scale: 1.04 }}
-            animate={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
+            animate={arrived ? { opacity: 1, filter: "blur(0px)", scale: 1 } : undefined}
             transition={{ duration: 1.1, ease: EASE }}
             className="text-glow font-title text-[34px] leading-[1.05] text-lime sm:text-[60px] lg:text-[88px]"
           >
@@ -282,7 +296,7 @@ function Hero({ tokens, onHover, onPick }: { tokens: TokenSummary[]; onHover: (h
             <br />
             Stay paid.
           </motion.h1>
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5, ease: EASE }} className="flex flex-col items-center gap-5">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={arrived ? { opacity: 1, y: 0 } : undefined} transition={{ duration: 0.7, delay: 0.5, ease: EASE }} className="flex flex-col items-center gap-5">
             <span aria-hidden className="text-[30px] font-thin leading-none text-ink-2">
               +
             </span>

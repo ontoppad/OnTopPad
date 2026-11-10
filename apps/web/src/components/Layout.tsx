@@ -43,7 +43,9 @@ function WalletButton() {
     return (
       <Button variant="primary" size="sm" onClick={w.openPicker}>
         <Wallet size={16} strokeWidth={1.5} />
-        Connect<span className="hidden sm:inline">&nbsp;wallet</span>
+        <span>
+          Connect<span className="hidden sm:inline"> wallet</span>
+        </span>
       </Button>
     );
   }
