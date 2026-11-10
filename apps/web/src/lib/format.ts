@@ -3,6 +3,8 @@ const subscript = (n: number) => [...String(n)].map((d) => SUB[Number(d)]).join(
 
 /** Tiny values the crypto way: 0.0000000171 → 0.0₇171 */
 function tiny(v: number, sig = 3): string {
+  // round first: 0.00009996 must become 0.0001, not lose a zero and read 10x smaller
+  v = Number(v.toPrecision(sig));
   const zeros = -Math.floor(Math.log10(v)) - 1;
   if (zeros < 4) return v.toFixed(zeros + sig).replace(/0+$/, "");
   const digits = String(Math.round(v * 10 ** (zeros + sig))).replace(/0+$/, "");
@@ -10,8 +12,9 @@ function tiny(v: number, sig = 3): string {
 }
 
 function compact(v: number): string {
-  if (v >= 1e9) return `${(v / 1e9).toFixed(v >= 1e10 ? 1 : 2)}B`;
-  if (v >= 1e6) return `${(v / 1e6).toFixed(v >= 1e7 ? 1 : 2)}M`;
+  // thresholds sit just under the next unit, so 999,999 reads 1.00M rather than 1000.0K
+  if (v >= 999_950_000) return `${(v / 1e9).toFixed(v >= 1e10 ? 1 : 2)}B`;
+  if (v >= 999_950) return `${(v / 1e6).toFixed(v >= 1e7 ? 1 : 2)}M`;
   if (v >= 1e4) return `${(v / 1e3).toFixed(1)}K`;
   return v.toLocaleString("en-US", { maximumFractionDigits: v >= 100 ? 0 : 2 });
 }

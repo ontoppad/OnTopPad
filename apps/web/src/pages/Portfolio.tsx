@@ -3,8 +3,8 @@ import { useWalletView, type WalletView } from "../lib/api.ts";
 import { txUrl } from "../lib/chain.ts";
 import { ago, amount, eth, share, short, usd } from "../lib/format.ts";
 import { useWallet } from "../lib/wallet.tsx";
-import { Art } from "../components/TokenCard.tsx";
-import { AddressChip, Band, BandStat, Card, Heading, PageHero, pill, pillGhost, Reveal, Skeleton, Stamp, TierMeter } from "../components/ui.tsx";
+import { Art, PosterSkeleton } from "../components/TokenCard.tsx";
+import { AddressChip, Band, BandStat, Card, Heading, PageHero, pill, pillGhost, Reveal, Skeleton, SkeletonRows, Stamp, TierMeter } from "../components/ui.tsx";
 
 /** A bag on the shelf: the token's poster with your value on it, your tier and your next cut underneath. */
 function Bag({ h }: { h: WalletView["holdings"][number] }) {
@@ -64,8 +64,32 @@ export default function Portfolio() {
       </PageHero>
 
       {isLoading || !data ? (
-        <div className="px-4 py-10 md:px-6">
-          <Skeleton className="h-64" />
+        <div aria-busy>
+          <Band className="mt-10">
+            <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+              {["Bag value", "Next payouts", "Payouts received", "Bonus received"].map((label) => (
+                <BandStat key={label} label={label} value={0} format={String} empty="" loading />
+              ))}
+            </div>
+          </Band>
+          <section className="px-4 py-16 md:px-6">
+            <Skeleton className="h-10 w-64" />
+            <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+              {Array.from({ length: 6 }, (_, i) => (
+                <PosterSkeleton key={i} />
+              ))}
+            </div>
+          </section>
+          <section className="grid gap-6 border-t border-line bg-deep px-4 py-16 md:px-6 lg:grid-cols-2">
+            {[0, 1].map((i) => (
+              <div key={i}>
+                <Skeleton className="h-10 w-48" />
+                <Card className="mt-6 overflow-hidden">
+                  <SkeletonRows rows={5} />
+                </Card>
+              </div>
+            ))}
+          </section>
         </div>
       ) : (
         <>

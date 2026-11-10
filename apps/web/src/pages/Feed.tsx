@@ -5,7 +5,7 @@ import { useActivity, useStats, type ActivityItem } from "../lib/api.ts";
 import { txUrl } from "../lib/chain.ts";
 import { ago, amount, eth, isHouse, or, short, usd } from "../lib/format.ts";
 import { Art } from "../components/TokenCard.tsx";
-import { cx, Heading, PageHero, pill, Reveal, Segmented, Skeleton, TokenArt } from "../components/ui.tsx";
+import { cx, Heading, PageHero, pill, Reveal, Segmented, Skeleton, SkeletonLine, TokenArt } from "../components/ui.tsx";
 
 const TYPES = [
   { value: "all", label: "All" },
@@ -91,6 +91,22 @@ function Row({ a }: { a: ActivityItem }) {
   );
 }
 
+/** A feed row still loading: art, kind badge and name, size, account, time. */
+function RowSkeleton() {
+  return (
+    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-1 rounded-xl border border-line bg-card px-4 py-3 md:grid-cols-[auto_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+      <Skeleton className="row-span-2 size-10 rounded-lg md:row-span-1" />
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-5 w-12 rounded-full" />
+        <SkeletonLine className="w-36 text-[14px]" />
+      </div>
+      <SkeletonLine className="w-16 justify-self-end text-[14px] md:justify-self-start" />
+      <SkeletonLine className="col-start-2 w-24 text-[13px] md:col-start-auto" />
+      <SkeletonLine className="w-12 justify-self-end text-[12px]" />
+    </div>
+  );
+}
+
 export default function Feed() {
   const [type, setType] = useState<(typeof TYPES)[number]["value"]>("all");
   const [shown, setShown] = useState(PAGE);
@@ -108,14 +124,27 @@ export default function Feed() {
           </span>
           Live from the chain
         </span>
-        {s && (
+        {!s ? (
+          <SkeletonLine className="w-96 max-w-full text-[12px]" />
+        ) : (
           <p className="num text-[12px] text-ink-3">
             {or(s.trades, (n) => `${n} trades`, "First trade pending")} · {or(s.bonusTokens, (v) => `${amount(v)} bonus tokens to buyers`, "bonus ready on the first buy")} · {s.paid ? `${eth(s.paid)} paid to holders` : or(s.pot, (v) => `${eth(v)} filling holder pots`, "holder pots open")}
           </p>
         )}
       </PageHero>
 
-      {all && <Highlights items={all} />}
+      {all ? (
+        <Highlights items={all} />
+      ) : (
+        <section aria-busy className="bg-deep px-4 py-16 md:px-6">
+          <Skeleton className="mx-auto h-10 w-full max-w-md" />
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="aspect-[16/10] rounded-2xl" />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="px-4 py-16 md:px-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -131,7 +160,13 @@ export default function Feed() {
           />
         </div>
 
-        {isLoading && <Skeleton className="mt-6 h-80" />}
+        {isLoading && (
+          <div aria-busy className="mt-6 flex flex-col gap-2">
+            {Array.from({ length: 8 }, (_, i) => (
+              <RowSkeleton key={i} />
+            ))}
+          </div>
+        )}
         {/* keyed by filter so a switch swaps the list in one fade; inside it, new events slide in on top */}
         <motion.div key={type} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }} className="mt-6 flex flex-col gap-2">
           <AnimatePresence initial={false}>

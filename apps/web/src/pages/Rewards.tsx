@@ -6,14 +6,23 @@ import { txUrl } from "../lib/chain.ts";
 import { scrollToEl } from "../lib/scroll.ts";
 import { ago, amount, eth, isHouse, share, short, usd } from "../lib/format.ts";
 import { AreaChart } from "../components/Chart.tsx";
-import { Band, BandStat, Button, Card, cx, Heading, Num, PageHero, pill, Reveal, Skeleton, Stat, TierMeter, TokenArt } from "../components/ui.tsx";
+import { Band, BandStat, Button, Card, cx, Heading, Num, PageHero, pill, Reveal, Skeleton, SkeletonLine, Stat, TierMeter, TokenArt } from "../components/ui.tsx";
 
 function Lookup({ address }: { address: string }) {
   const { data, isLoading } = useWalletView(address.toLowerCase());
   const ref = useRef<HTMLDivElement>(null);
   const ready = !!data;
   useEffect(() => scrollToEl(ref.current), [address, ready]);
-  if (isLoading || !data) return <Skeleton className="h-40" />;
+  if (isLoading || !data)
+    return (
+      <div aria-busy className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {["Bonus tokens received", "Holder payouts received", "Tokens held"].map((label) => (
+          <Card key={label} className="p-5">
+            <Stat label={label} value={0} format={String} empty="" loading />
+          </Card>
+        ))}
+      </div>
+    );
   const nothing = !data.payoutsCount && !data.bonusTokens && !data.holdings.length;
   return (
     <div ref={ref} className="flex scroll-mt-32 flex-col gap-4 text-left">
@@ -95,14 +104,14 @@ export default function Rewards() {
         <a href="#check" className={pill}>
           Check a wallet
         </a>
-        {s && <span className="num text-[12px] text-ink-3">Indexed to block {s.indexed.toLocaleString("en-US")}</span>}
+        {s ? <span className="num text-[12px] text-ink-3">Indexed to block {s.indexed.toLocaleString("en-US")}</span> : <SkeletonLine className="w-44 text-[12px]" />}
       </PageHero>
 
       <Band className="mt-10">
         <div className="grid gap-8 md:grid-cols-3">
-          <BandStat label="Bonus tokens paid on buys" value={s?.bonusUsd ?? 0} format={usd} sub={s ? `${amount(s.bonusTokens)} tokens over ${s.buys} buys, at today's prices` : undefined} empty="First buy pending" />
-          <BandStat label="Paid to holders" value={s?.paid ?? 0} format={(v) => eth(v)} sub={s?.paid ? `${s.rounds} rounds · ${s.payments} payments · ${s.paidWallets} wallets` : undefined} empty="Round 1 filling" />
-          <BandStat label="In the pots right now" value={s?.pot ?? 0} format={(v) => eth(v)} sub={s ? `${usd(s.potUsd)} waiting for the next rounds` : undefined} empty="Fills with the next buy" />
+          <BandStat label="Bonus tokens paid on buys" loading={!s} value={s?.bonusUsd ?? 0} format={usd} sub={s ? `${amount(s.bonusTokens)} tokens over ${s.buys} buys, at today's prices` : undefined} empty="First buy pending" />
+          <BandStat label="Paid to holders" loading={!s} value={s?.paid ?? 0} format={(v) => eth(v)} sub={s?.paid ? `${s.rounds} rounds · ${s.payments} payments · ${s.paidWallets} wallets` : undefined} empty="Round 1 filling" />
+          <BandStat label="In the pots right now" loading={!s} value={s?.pot ?? 0} format={(v) => eth(v)} sub={s ? `${usd(s.potUsd)} waiting for the next rounds` : undefined} empty="Fills with the next buy" />
         </div>
       </Band>
 
@@ -111,15 +120,31 @@ export default function Rewards() {
           <Card className="h-full p-6">
             <div className="mb-4 flex items-baseline justify-between">
               <span className="text-[17px] font-semibold">{points.length ? "Holder payouts, cumulative ETH" : "Bonus paid to buyers, cumulative USD"}</span>
-              {s && <Num value={points.length ? s.paid : s.bonusUsd} format={points.length ? (v) => eth(v) : usd} className="text-[14px] text-ink-2" />}
+              {s ? <Num value={points.length ? s.paid : s.bonusUsd} format={points.length ? (v) => eth(v) : usd} className="text-[14px] text-ink-2" /> : <SkeletonLine className="w-20 text-[14px]" />}
             </div>
-            {chartPoints.length ? <AreaChart points={chartPoints.length === 1 ? [{ t: chartPoints[0]!.t - 86_400, v: 0 }, chartPoints[0]!] : chartPoints} format={points.length ? (v) => eth(v, "") : usd} /> : <Skeleton className="h-[280px]" />}
+            {chartPoints.length ? <AreaChart points={chartPoints.length === 1 ? [{ t: chartPoints[0]!.t - 86_400, v: 0 }, chartPoints[0]!] : chartPoints} format={points.length ? (v) => eth(v, "") : usd} /> : !s ? (
+              <Skeleton className="h-[280px]" />
+            ) : (
+              <div className="grid h-[280px] place-items-center rounded-xl border border-dashed border-line-2 px-6 text-center text-[14px] text-ink-2">The line starts with the first bonus. Every buy after that draws it higher</div>
+            )}
           </Card>
         </Reveal>
         <Reveal delay={0.08}>
           <Card className="h-full p-6">
             <span className="text-[17px] font-semibold">High scores</span>
             <p className="mt-1 text-[13px] text-ink-3">{lb?.earners.length ? "Most ETH received from holder payouts" : "Most bonus received on buys, at today's prices"}</p>
+            {!lb && (
+              <div aria-busy className="mt-4 flex flex-col gap-1">
+                {Array.from({ length: 8 }, (_, i) => (
+                  <div key={i} className="flex h-10 items-center gap-3 px-3">
+                    <Skeleton className="size-6 rounded-full" />
+                    <SkeletonLine className="flex-1 text-[13px]" />
+                    <SkeletonLine className="w-16 text-[13px]" />
+                  </div>
+                ))}
+              </div>
+            )}
+            {lb && !lb.earners.length && !lb.bonus.length && <p className="mt-4 text-[14px] text-ink-2">The first buy puts a wallet on the board. Top spot is open</p>}
             <ol className="mt-4 flex flex-col gap-1">
               {(lb?.earners.length
                 ? lb.earners.slice(0, 8).map((e) => ({ account: e.account, v: eth(e.amount) }))

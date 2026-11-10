@@ -8,8 +8,8 @@ import { addressUrl, txUrl } from "../lib/chain.ts";
 import { ago, amount, eth, isHouse, or, price, share, short, usd } from "../lib/format.ts";
 import { CandleChart } from "../components/Chart.tsx";
 import { TradePanel } from "../components/TradePanel.tsx";
-import { ChangeText, Poster } from "../components/TokenCard.tsx";
-import { AddressChip, artSrc, ButtonLink, Card, cx, Heading, Reveal, Segmented, Skeleton, Spec, Stamp, TierMeter, TokenArt } from "../components/ui.tsx";
+import { ChangeText, Poster, PosterSkeleton } from "../components/TokenCard.tsx";
+import { AddressChip, artSrc, ButtonLink, Card, cx, Heading, Reveal, Segmented, Skeleton, SkeletonLine, SkeletonRows, Spec, Stamp, TierMeter, TokenArt } from "../components/ui.tsx";
 
 const TF = [
   { value: "60", label: "1m" },
@@ -19,7 +19,8 @@ const TF = [
 ] as const;
 
 function Trades({ address, symbol }: { address: string; symbol: string }) {
-  const { data } = useTrades(address);
+  const { data, isLoading } = useTrades(address);
+  if (isLoading) return <SkeletonRows />;
   if (!data?.length) return <p className="p-6 text-[14px] text-ink-2">The first trade after launch shows up here within a few seconds</p>;
   return (
     <div className="overflow-x-auto">
@@ -64,7 +65,8 @@ function Trades({ address, symbol }: { address: string; symbol: string }) {
 }
 
 function Holders({ address }: { address: string }) {
-  const { data } = useHolders(address);
+  const { data, isLoading } = useHolders(address);
+  if (isLoading) return <SkeletonRows />;
   if (!data?.items.length) return <p className="p-6 text-[14px] text-ink-2">Holders appear here as soon as the first buy settles</p>;
   return (
     <div className="overflow-x-auto">
@@ -112,7 +114,8 @@ function Holders({ address }: { address: string }) {
 }
 
 function Rounds({ address }: { address: string }) {
-  const { data } = useRounds(address);
+  const { data, isLoading } = useRounds(address);
+  if (isLoading) return <SkeletonRows />;
   if (!data?.length)
     return <p className="p-6 text-[14px] text-ink-2">The first payout round goes out once the pot fills. Every round is listed here with its snapshot block and transaction</p>;
   return (
@@ -149,6 +152,62 @@ function Rounds({ address }: { address: string }) {
   );
 }
 
+/** The token page's frame while the token loads: header, stat strip, chart, tabs and the trade panel. */
+function TokenSkeleton() {
+  return (
+    <div aria-busy>
+      <section className="border-b border-line px-4 pb-10 pt-6 md:px-6 md:pt-8">
+        <Skeleton className="h-7 w-24 rounded-full" />
+        <div className="mt-6 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div className="flex items-center gap-5">
+            <Skeleton className="size-20 shrink-0 rounded-2xl md:size-28" />
+            <div className="flex flex-col gap-3">
+              <Skeleton className="h-8 w-56 rounded-md md:h-12 md:w-80" />
+              <SkeletonLine className="w-64 text-[13px]" />
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 md:items-end">
+            <Skeleton className="h-9 w-40 rounded-md" />
+            <SkeletonLine className="w-28 text-[13px]" />
+          </div>
+        </div>
+      </section>
+      <div className="px-4 md:px-6">
+        <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3 lg:grid-cols-6">
+          {Array.from({ length: 6 }, (_, i) => (
+            <div key={i} className="flex flex-col gap-2 bg-card p-4">
+              <SkeletonLine className="w-16 text-[12px]" />
+              <SkeletonLine className="w-24 text-[18px]" />
+              <SkeletonLine className="w-20 text-[12px]" />
+            </div>
+          ))}
+        </div>
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_380px]">
+          <div className="flex min-w-0 flex-col gap-6">
+            <Card className="p-5">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <SkeletonLine className="w-28 text-[17px]" />
+                <Skeleton className="h-10 w-48 rounded-full" />
+              </div>
+              <Skeleton className="h-[360px]" />
+            </Card>
+            <Card className="overflow-hidden">
+              <div className="border-b border-line p-3">
+                <Skeleton className="h-10 w-80 max-w-full rounded-full" />
+              </div>
+              <SkeletonRows />
+            </Card>
+          </div>
+          <div className="flex flex-col gap-4">
+            <Skeleton className="h-[420px] rounded-2xl" />
+            <Skeleton className="h-32 rounded-2xl" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Token() {
   const { address = "" } = useParams();
   const { data: t, isLoading, error } = useToken(address.toLowerCase());
@@ -168,7 +227,7 @@ export default function Token() {
         </ButtonLink>
       </div>
     );
-  if (isLoading || !t) return <div className="px-4 pt-10 md:px-6"><Skeleton className="h-[480px]" /></div>;
+  if (isLoading || !t) return <TokenSkeleton />;
 
   const edge = buyerEdge(t.bonusBps) * 100;
   const src = artSrc(t.image);
@@ -226,7 +285,7 @@ export default function Token() {
               </div>
             </div>
             <div className="flex flex-col items-start gap-1 md:items-end">
-              <span className="num text-[34px] leading-none font-medium">{price(t.price * ethUsd)}</span>
+              {cfg ? <span className="num text-[34px] leading-none font-medium">{price(t.price * ethUsd)}</span> : <Skeleton className="h-[34px] w-40 rounded-md" />}
               <ChangeText t={t} />
             </div>
           </div>
@@ -258,7 +317,7 @@ export default function Token() {
                 <span className="whitespace-nowrap text-[17px] font-semibold">Price in USD</span>
                 <Segmented value={tf} onChange={setTf} options={[...TF]} />
               </div>
-              {candles ? <CandleChart candles={candles.map((c) => ({ ...c, o: c.o * ethUsd, h: c.h * ethUsd, l: c.l * ethUsd, c: c.c * ethUsd, v: c.v * ethUsd }))} format={price} /> : <Skeleton className="h-[360px]" />}
+              {candles && cfg ? <CandleChart candles={candles.map((c) => ({ ...c, o: c.o * ethUsd, h: c.h * ethUsd, l: c.l * ethUsd, c: c.c * ethUsd, v: c.v * ethUsd }))} format={price} /> : <Skeleton className="h-[360px]" />}
               <p className="mt-3 num text-[12px] text-ink-3">Candles from on-chain trades · USD at the live ETH price · down candles hollow</p>
             </Card>
 
@@ -325,6 +384,16 @@ export default function Token() {
         </div>
       </div>
 
+      {!all && (
+        <section aria-busy className="mt-16 border-t border-line bg-deep px-4 py-16 md:px-6">
+          <Skeleton className="h-10 w-64" />
+          <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-6">
+            {Array.from({ length: 6 }, (_, i) => (
+              <PosterSkeleton key={i} />
+            ))}
+          </div>
+        </section>
+      )}
       {more.length > 0 && (
         <section className="mt-16 border-t border-line bg-deep px-4 py-16 md:px-6">
           <div className="flex items-end justify-between gap-4">

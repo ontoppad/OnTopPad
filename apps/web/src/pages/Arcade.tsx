@@ -4,8 +4,8 @@ import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useStats, useTokens, type TokenSummary } from "../lib/api.ts";
 import { amount, eth, or, usd } from "../lib/format.ts";
 import { scrollToEl } from "../lib/scroll.ts";
-import { Art, ChangeText, Poster } from "../components/TokenCard.tsx";
-import { artSrc, ButtonLink, cx, Segmented, Skeleton, Stamp } from "../components/ui.tsx";
+import { Art, ChangeText, Poster, PosterSkeleton } from "../components/TokenCard.tsx";
+import { artSrc, ButtonLink, cx, Segmented, Skeleton, SkeletonLine, Stamp } from "../components/ui.tsx";
 
 type Sort = "hot" | "new" | "mcap" | "bonus" | "pot" | "holders";
 const SORTS: { value: Sort; label: string }[] = [
@@ -50,7 +50,9 @@ function Hero({ top }: { top?: TokenSummary }) {
             Launch a token
           </ButtonLink>
         </div>
-        {s && (
+        {!s ? (
+          <SkeletonLine className="w-80 max-w-full text-[12px]" />
+        ) : (
           <p className="num text-[12px] text-ink-3">
             {s.tokens} tokens live · {or(s.bonusTokens, (v) => `${amount(v)} bonus tokens paid`, "bonus ready on the first buy")} · {s.paid ? `${eth(s.paid)} paid to holders` : or(s.pot, (v) => `${eth(v)} filling the pots`, "pots open")}
           </p>
@@ -229,8 +231,8 @@ function Carousel({ tokens }: { tokens: TokenSummary[] }) {
 
 // ───────────── grid ─────────────
 
-function Board({ tokens, sort, setSort }: { tokens: TokenSummary[]; sort: Sort; setSort: (s: Sort) => void }) {
-  const [q, setQ] = useState("");
+function Board({ tokens, sort, setSort, initialQ }: { tokens: TokenSummary[]; sort: Sort; setSort: (s: Sort) => void; initialQ: string }) {
+  const [q, setQ] = useState(initialQ);
   const [shown, setShown] = useState(PAGE);
   const list = useMemo(() => {
     const n = q.trim().toLowerCase();
@@ -318,7 +320,10 @@ export default function Arcade() {
   const [params, setParams] = useSearchParams();
   const initial = params.get("sort") as Sort | null;
   const [sort, setSortState] = useState<Sort>(SORTS.some((s) => s.value === initial) ? initial! : "hot");
-  const { data: tokens, isLoading } = useTokens("hot", params.get("q") ?? "");
+  // the header search lands here as ?q=: it seeds the board's own search box, so it shows and can be cleared
+  // shortcut: board and search cover the 60 hottest tokens (API default); page the API once the pad passes 60
+  const q = params.get("q") ?? "";
+  const { data: tokens, isLoading } = useTokens("hot");
 
   const setSort = (s: Sort) => {
     setSortState(s);
@@ -331,9 +336,24 @@ export default function Arcade() {
 
   if (isLoading || !tokens)
     return (
-      <div className="flex flex-col gap-6 px-4 py-10 md:px-6">
-        <Skeleton className="h-[380px]" />
-        <Skeleton className="h-[480px]" />
+      <div aria-busy>
+        <Hero />
+        <div className="mt-16 flex flex-col items-center gap-3 px-4">
+          <Skeleton className="h-9 w-full max-w-lg md:h-12" />
+          <SkeletonLine className="w-72 max-w-full text-[15px]" />
+        </div>
+        <div className="mt-10 px-4 md:px-[6%]">
+          <Skeleton className="aspect-[21/9] rounded-2xl md:aspect-[21/8]" />
+        </div>
+        <section className="px-4 py-16 md:px-6">
+          <Skeleton className="h-10 w-full max-w-md" />
+          <Skeleton className="mt-6 h-10 w-full max-w-xl rounded-full" />
+          <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+            {Array.from({ length: 12 }, (_, i) => (
+              <PosterSkeleton key={i} />
+            ))}
+          </div>
+        </section>
       </div>
     );
 
@@ -342,7 +362,7 @@ export default function Arcade() {
       <Hero top={tokens[0]} />
       <Spotlight tokens={tokens} />
       {tokens.length > 3 && <Carousel tokens={tokens.slice(0, 12)} />}
-      <Board tokens={tokens} sort={sort} setSort={setSort} />
+      <Board key={q} initialQ={q} tokens={tokens} sort={sort} setSort={setSort} />
       <Modes tokens={tokens} pick={pick} />
       <section className="flex flex-col items-center gap-4 px-4 py-16 text-center">
         <h2 className="font-title text-[26px] leading-[1.1] md:text-[34px]">Your token could be next on the board</h2>

@@ -161,9 +161,11 @@ export function candles(token: string, tf: number) {
   }
   const end = bucket(now());
   let c = out[out.length - 1]!;
-  while (c.t < end && out.length < 5_000) {
+  // fill up to now even when the gap loop already hit the cap, or an old quiet token's chart stops days ago
+  while (c.t < end) {
     c = { t: c.t + tf, o: last, h: last, l: last, c: last, v: 0 };
     out.push(c);
+    if (out.length > 5_000) out.shift();
   }
   return out.slice(-1_000);
 }

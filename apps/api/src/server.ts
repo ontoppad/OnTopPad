@@ -38,6 +38,8 @@ function cached<T>(key: string, fn: () => T, ttl = 4_000): T {
   const hit = memo.get(key);
   if (hit && Date.now() - hit.at < ttl) return hit.v as T;
   const v = fn();
+  // keys carry search text and addresses from the request; drop everything at once before it can pile up
+  if (memo.size >= 1_000) memo.clear();
   memo.set(key, { at: Date.now(), v });
   return v;
 }

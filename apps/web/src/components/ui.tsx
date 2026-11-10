@@ -76,11 +76,13 @@ export function Num({ value, format, className }: { value: number; format: (v: n
 }
 
 /** Big figure with label. `empty` replaces a zero with words that say what will fill it. */
-export function Stat({ label, value, format, sub, empty, accent }: { label: string; value: number; format: (v: number) => string; sub?: ReactNode; empty: string; accent?: boolean }) {
+export function Stat({ label, value, format, sub, empty, accent, loading }: { label: string; value: number; format: (v: number) => string; sub?: ReactNode; empty: string; accent?: boolean; loading?: boolean }) {
   return (
     <div className="flex flex-col gap-2">
       <span className="text-[13px] text-ink-3">{label}</span>
-      {value > 0 ? (
+      {loading ? (
+        <Skeleton className="h-7 w-32 rounded-md" />
+      ) : value > 0 ? (
         <Num value={value} format={format} className={cx("text-[24px] sm:text-[28px] leading-none font-medium tracking-tight", accent && "text-accent")} />
       ) : (
         <span className="text-[20px] leading-7 text-ink-2">{empty}</span>
@@ -292,11 +294,16 @@ export function Band({ children, className }: { children: ReactNode; className?:
 }
 
 /** A big figure sitting on the lime band. */
-export function BandStat({ label, value, format, sub, empty }: { label: string; value: number; format: (v: number) => string; sub?: ReactNode; empty: string }) {
+export function BandStat({ label, value, format, sub, empty, loading }: { label: string; value: number; format: (v: number) => string; sub?: ReactNode; empty: string; loading?: boolean }) {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-[13px] opacity-70">{label}</span>
-      {value > 0 ? <Num value={value} format={format} className="text-[28px] leading-tight font-semibold tracking-tight md:text-[36px]" /> : <span className="text-[22px] leading-tight font-semibold md:text-[28px]">{empty}</span>}
+      {loading ? (
+        <>
+          <Skeleton className="my-1 h-8 w-40 rounded-md bg-lime-ink/15 md:h-10" />
+          <Skeleton className="h-3 w-48 rounded-md bg-lime-ink/10" />
+        </>
+      ) : value > 0 ? <Num value={value} format={format} className="text-[28px] leading-tight font-semibold tracking-tight md:text-[36px]" /> : <span className="text-[22px] leading-tight font-semibold md:text-[28px]">{empty}</span>}
       {sub && <span className="num text-[12px] opacity-70">{sub}</span>}
     </div>
   );
@@ -307,7 +314,25 @@ export const pill = "btn-press inline-flex h-11 items-center gap-2 rounded-full 
 export const pillGhost = "inline-flex h-11 items-center gap-2 rounded-full border border-line-2 bg-card px-5 text-[14px] text-ink transition-colors duration-150 hover:bg-raised";
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cx("rounded-xl bg-raised/70", className)} />;
+  return <div aria-hidden className={cx("skeleton rounded-xl", className)} />;
+}
+
+/** Text-height bar for a line that is still loading. */
+export const SkeletonLine = ({ className }: { className?: string }) => <Skeleton className={cx("h-[1em] rounded-md", className)} />;
+
+/** Placeholder rows shaped like the tables and lists they stand in for. */
+export function SkeletonRows({ rows = 6, className }: { rows?: number; className?: string }) {
+  return (
+    <div aria-busy className={cx("flex flex-col text-[13px]", className)}>
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="flex items-center gap-6 border-t border-line px-5 py-3.5 first:border-0">
+          <SkeletonLine className="w-24" />
+          <SkeletonLine className="flex-1" />
+          <SkeletonLine className={i % 2 ? "w-12" : "w-20"} />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 /** One technical spec line in mono; fills space with something you can check. */

@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import type { TokenSummary } from "../lib/api.ts";
 import { eth, or, pct, usd } from "../lib/format.ts";
-import { artSrc, cx, Stamp, TokenArt } from "./ui.tsx";
+import { artSrc, cx, Skeleton, SkeletonLine, Stamp, TokenArt } from "./ui.tsx";
 
 /** Change since launch when the token is younger than a day, otherwise 24h. */
 function change(t: TokenSummary) {
@@ -46,5 +46,16 @@ export function Poster({ t }: { t: TokenSummary }) {
         {or(t.holders, (n) => `${n} holders`, "first holder wins")} · {t.paid ? `${eth(t.paid)} paid` : "pot filling"}
       </span>
     </Link>
+  );
+}
+
+/** A poster tile still loading: same square, same two caption lines. */
+export function PosterSkeleton() {
+  return (
+    <div className="flex flex-col gap-2">
+      <Skeleton className="aspect-square" />
+      <SkeletonLine className="w-3/4 text-[13px]" />
+      <SkeletonLine className="w-1/2 text-[12px]" />
+    </div>
   );
 }

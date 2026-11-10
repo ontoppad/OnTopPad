@@ -10,7 +10,7 @@ import { quote } from "../lib/chain.ts";
 import { ago, amount, eth, or, usd } from "../lib/format.ts";
 import { Art } from "../components/TokenCard.tsx";
 import { ContractsTable } from "../components/Contracts.tsx";
-import { cx, Segmented, Stamp, TokenArt, useTween } from "../components/ui.tsx";
+import { cx, Segmented, Skeleton, SkeletonLine, Stamp, TokenArt, useTween } from "../components/ui.tsx";
 import type { Hover } from "../components/CrtScene.tsx";
 
 const CrtScene = lazy(() => import("../components/CrtScene.tsx"));
@@ -684,12 +684,12 @@ function WalletCheck() {
   );
 }
 
-function BigStat({ label, value, format, empty }: { label: string; value: number; format: (v: number) => string; empty: string }) {
+function BigStat({ label, value, format, empty, loading }: { label: string; value: number; format: (v: number) => string; empty: string; loading?: boolean }) {
   const v = useTween(value);
   return (
     <div className="flex flex-col gap-2">
       <span className="num text-[12px] text-ink-3">[ {label} ]</span>
-      {value > 0 ? <span className="font-display whitespace-nowrap text-[34px] leading-none font-[800] text-ink sm:text-[46px] md:text-[56px]">{format(v)}</span> : <span className="text-[18px] leading-7 text-ink-2">{empty}</span>}
+      {loading ? <Skeleton className="h-[34px] w-32 rounded-md sm:h-[46px] md:h-[56px] md:w-44" /> : value > 0 ? <span className="font-display whitespace-nowrap text-[34px] leading-none font-[800] text-ink sm:text-[46px] md:text-[56px]">{format(v)}</span> : <span className="text-[18px] leading-7 text-ink-2">{empty}</span>}
     </div>
   );
 }
@@ -705,19 +705,21 @@ function Receipts({ house, ethUsd }: { house?: TokenSummary; ethUsd: number }) {
           <Rise text={"Every number,\non-chain."} className="font-title mt-3 text-[38px] leading-[1.02] md:text-[64px]" />
           <motion.div initial="hide" whileInView="show" viewport={{ once: true, margin: "0px 0px -10% 0px" }} variants={STAGGER} className="mt-10 grid grid-cols-2 gap-x-6 gap-y-8">
             <motion.div variants={LIFT}>
-              <BigStat label="tokens launched" value={s?.tokens ?? 0} format={(v) => Math.round(v).toString()} empty="First launch pending" />
+              <BigStat label="tokens launched" loading={!s} value={s?.tokens ?? 0} format={(v) => Math.round(v).toString()} empty="First launch pending" />
             </motion.div>
             <motion.div variants={LIFT}>
-              <BigStat label="bonus paid on buys" value={s?.bonusUsd ?? 0} format={usd} empty="Waiting on the first buy" />
+              <BigStat label="bonus paid on buys" loading={!s} value={s?.bonusUsd ?? 0} format={usd} empty="Waiting on the first buy" />
             </motion.div>
             <motion.div variants={LIFT}>
-              <BigStat label="paid to holders" value={s?.paid ?? 0} format={(v) => eth(v)} empty="First round filling" />
+              <BigStat label="paid to holders" loading={!s} value={s?.paid ?? 0} format={(v) => eth(v)} empty="First round filling" />
             </motion.div>
             <motion.div variants={LIFT}>
-              <BigStat label="trades" value={s?.trades ?? 0} format={(v) => Math.round(v).toLocaleString("en-US")} empty="Market opens with the first buy" />
+              <BigStat label="trades" loading={!s} value={s?.trades ?? 0} format={(v) => Math.round(v).toLocaleString("en-US")} empty="Market opens with the first buy" />
             </motion.div>
           </motion.div>
-          {s && (
+          {!s ? (
+            <SkeletonLine className="mt-6 w-80 max-w-full text-[12px]" />
+          ) : (
             <p className="num mt-6 text-[12px] text-ink-3">
               Indexed to block {s.indexed.toLocaleString("en-US")} · {s.head - s.indexed < 120 ? "live" : "catching up"} · last trade {s.lastTradeAt ? ago(s.lastTradeAt) : "pending"}
             </p>

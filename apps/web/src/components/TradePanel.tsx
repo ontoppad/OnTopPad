@@ -169,7 +169,7 @@ export function TradePanel({ token, ethUsd }: { token: TokenSummary; ethUsd: num
             </div>
             <div className="flex items-center justify-between">
               <Stamp bps={token.bonusBps} />
-              <span className="num text-[14px] text-accent">{bonus > 0 ? `+${fmtAmount(bonus)}` : "Quoting"}</span>
+              <span className="num text-[14px] text-accent">{bonus > 0 ? `+${fmtAmount(bonus)}` : q.isFetching || !q.data ? "Quoting" : "Treasury refilling"}</span>
             </div>
             <div className="mt-2 flex items-baseline justify-between border-t border-line pt-3">
               <span className="text-[13px] text-ink">You get</span>
@@ -204,11 +204,11 @@ export function TradePanel({ token, ethUsd }: { token: TokenSummary; ethUsd: num
           Insert coin to trade
         </Button>
       ) : w.wrongChain ? (
-        <Button variant="secondary" size="lg" onClick={() => void w.ensureChain()}>
+        <Button variant="secondary" size="lg" onClick={() => w.ensureChain().catch((e) => toast({ title: "Network not switched", body: errorText(e), tone: "error" }))}>
           Switch network
         </Button>
       ) : (
-        <Button variant="primary" size="lg" disabled={busy || !q.data || over} onClick={() => void submit()}>
+        <Button variant="primary" size="lg" disabled={busy || !q.data || over || input !== debounced} onClick={() => void submit()}>
           {busy ? "Confirm in wallet" : over ? "Not enough balance" : side === "buy" ? `Buy $${token.symbol}` : `Sell $${token.symbol}`}
         </Button>
       )}

@@ -181,7 +181,8 @@ export interface Leaderboard {
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, init);
-  const body = await res.json();
+  // a proxy error page is HTML, not JSON: fall back to the status
+  const body = await res.json().catch(() => null);
   if (!res.ok) throw new Error(body?.error ?? `request failed (${res.status})`);
   return body as T;
 }
@@ -190,10 +191,10 @@ const live = (ms: number) => ({ refetchInterval: ms, staleTime: ms / 2 });
 
 export const useConfig = () => useQuery({ queryKey: ["config"], queryFn: () => api<Config>("/config"), ...live(10_000) });
 export const useStats = () => useQuery({ queryKey: ["stats"], queryFn: () => api<Stats>("/stats"), ...live(8_000) });
-export const useTokens = (sort = "hot", q = "") =>
+export const useTokens = (sort = "hot") =>
   useQuery({
-    queryKey: ["tokens", sort, q],
-    queryFn: () => api<{ items: TokenSummary[] }>(`/tokens?sort=${sort}&q=${encodeURIComponent(q)}`).then((r) => r.items),
+    queryKey: ["tokens", sort],
+    queryFn: () => api<{ items: TokenSummary[] }>(`/tokens?sort=${sort}`).then((r) => r.items),
     ...live(8_000),
   });
 export const useToken = (a?: string) =>

@@ -65,6 +65,7 @@ export default function Launch() {
   const [links, setLinks] = useState({ x: "", telegram: "", website: "" });
   const [busy, setBusy] = useState<string | null>(null);
   const steps = useRef<HTMLOListElement>(null);
+  const uploaded = useRef<{ key: string; image: Blob | null; uri: string }>(null);
   const stepPill = usePill(steps, '[aria-current="step"]', step);
 
   const preview = useMemo(() => (image ? URL.createObjectURL(image) : null), [image]);
@@ -83,21 +84,27 @@ export default function Launch() {
     if (!w.client) return w.openPicker();
     try {
       await w.ensureChain();
-      setBusy("Uploading artwork");
-      const form = new FormData();
-      form.set("name", name.trim());
-      form.set("symbol", symbol);
-      form.set("description", description.trim());
-      for (const [k, v] of Object.entries(links)) if (v) form.set(k, v);
-      form.set("image", image!, "art.png");
-      const res = await fetch("/api/metadata", { method: "POST", body: form });
-      const meta = await res.json();
-      if (!res.ok) throw new Error(meta.error);
+      // a cancelled signature must not burn another upload from the hourly limit: reuse while nothing changed
+      const key = JSON.stringify([name.trim(), symbol, description.trim(), links]);
+      if (uploaded.current?.key !== key || uploaded.current.image !== image) {
+        setBusy("Uploading artwork");
+        const form = new FormData();
+        form.set("name", name.trim());
+        form.set("symbol", symbol);
+        form.set("description", description.trim());
+        for (const [k, v] of Object.entries(links)) if (v) form.set(k, v);
+        form.set("image", image!, "art.png");
+        const res = await fetch("/api/metadata", { method: "POST", body: form });
+        // a proxy error page is HTML, not JSON
+        const meta = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(meta?.error ?? `Upload failed (${res.status})`);
+        uploaded.current = { key, image, uri: meta.uri };
+      }
       setBusy("Confirm the launch in your wallet");
       const r = await launch(w.client, {
         name: name.trim(),
         symbol,
-        metadataURI: meta.uri,
+        metadataURI: uploaded.current.uri,
         bonusBps: bonus,
         startTick: startTickForFdv(fdv, false),
         firstBuy: firstBuy ? parseEther(firstBuy) : 0n,

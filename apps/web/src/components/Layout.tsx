@@ -4,11 +4,12 @@ import { AnimatePresence, motion, MotionConfig, useScroll, useSpring } from "mot
 import { Activity, BookOpen, Gamepad2, Gift, Moon, Rocket, Search, Sun, UserRound, Wallet, X } from "lucide-react";
 import { formatEther } from "viem";
 import { useActivity, useConfig } from "../lib/api.ts";
-import { chain, contracts, network } from "../lib/chain.ts";
+import { chain, contracts, errorText, network } from "../lib/chain.ts";
 import { ago, eth, short } from "../lib/format.ts";
 import { useWallet } from "../lib/wallet.tsx";
-import { Button, cx, Pill, TokenArt, usePill } from "./ui.tsx";
+import { Button, cx, Pill, Skeleton, SkeletonLine, TokenArt, usePill } from "./ui.tsx";
 import { Splash } from "./Splash.tsx";
+import { useToast } from "./toast.tsx";
 import Lenis from "lenis";
 import { smooth } from "../lib/scroll.ts";
 
@@ -37,6 +38,7 @@ function useTheme() {
 
 function WalletButton() {
   const w = useWallet();
+  const toast = useToast();
   if (!w.address) {
     return (
       <Button variant="primary" size="sm" onClick={w.openPicker}>
@@ -47,7 +49,7 @@ function WalletButton() {
   }
   if (w.wrongChain) {
     return (
-      <Button variant="secondary" size="sm" onClick={() => void w.ensureChain()}>
+      <Button variant="secondary" size="sm" onClick={() => w.ensureChain().catch((e) => toast({ title: "Network not switched", body: errorText(e), tone: "error" }))}>
         Switch to {network.label}
       </Button>
     );
@@ -63,10 +65,18 @@ function WalletButton() {
 
 function WalletPicker() {
   const w = useWallet();
+  const toast = useToast();
+  const { picker, closePicker } = w;
+  useEffect(() => {
+    if (!picker) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closePicker();
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, [picker, closePicker]);
   return (
     <AnimatePresence>
       {w.picker && (
-        <motion.div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={w.closePicker}>
+        <motion.div data-lenis-prevent className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={w.closePicker}>
           <motion.div
             role="dialog"
             aria-label="Choose a wallet"
@@ -88,7 +98,7 @@ function WalletPicker() {
               {w.providers.map((p) => (
                 <button
                   key={p.info.uuid}
-                  onClick={() => void w.connect(p).then(w.ensureChain).catch(() => {})}
+                  onClick={() => void w.connect(p).then(w.ensureChain).catch((e) => toast({ title: "Wallet not connected", body: errorText(e), tone: "error" }))}
                   className="flex h-12 items-center gap-3 rounded-[10px] border border-line bg-raised px-3 text-left text-sm hover:border-line-2 hover:bg-deep transition-colors duration-150"
                 >
                   {p.info.icon ? <img src={p.info.icon} alt="" className="size-6 rounded-md" /> : <Wallet size={18} strokeWidth={1.5} className="text-ink-2" />}
@@ -137,7 +147,18 @@ function SearchBox() {
 /** Live trade marquee. It only moves because the data underneath is live. */
 function Ticker() {
   const { data } = useActivity("all", 24);
-  if (!data?.length) return <div className="h-9 border-b border-line" />;
+  if (!data)
+    return (
+      <div aria-busy className="flex h-9 items-center gap-8 overflow-hidden border-b border-line bg-deep pl-4">
+        {Array.from({ length: 8 }, (_, i) => (
+          <span key={i} className="flex shrink-0 items-center gap-2">
+            <Skeleton className="size-[18px] rounded-md" />
+            <SkeletonLine className="w-40 text-[12px]" />
+          </span>
+        ))}
+      </div>
+    );
+  if (!data.length) return <div className="h-9 border-b border-line" />;
   const items = [...data, ...data];
   return (
     <div className="group relative h-9 overflow-hidden border-b border-line bg-deep" aria-label="Latest activity">
@@ -183,7 +204,7 @@ function Footer() {
   const { data } = useConfig();
   return (
     <footer className="mt-24 border-t border-line pb-24 md:pb-8">
-      <div className="mx-auto grid gap-8 px-4 py-10 md:grid-cols-[1.2fr_1fr_1fr] md:px-6">
+      <div className="mx-auto grid gap-8 px-4 py-10 md:grid-cols-[1.2fr_0.6fr_1fr_1fr] md:px-6">
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <img src="/brand/logo-256.webp" alt="ONTOPPAD" width={40} height={40} className="rounded-lg" />
@@ -194,6 +215,15 @@ function Footer() {
             @OnTopPad on X
           </a>
         </div>
+        {/* every page, Rules included: the phone tab bar only fits five */}
+        <nav className="grid grid-cols-2 content-start gap-2 text-[13px] md:grid-cols-1" aria-label="Pages">
+          <span className="col-span-full text-ink-3">Play</span>
+          {NAV.map(({ to, label }) => (
+            <Link key={to} to={to} className="text-ink-2 hover:text-ink">
+              {label}
+            </Link>
+          ))}
+        </nav>
         <div className="flex flex-col gap-2 text-[13px]">
           <span className="text-ink-3">Contracts</span>
           {(["launchpad", "hook", "router", "distributor"] as const).map((k) => (
@@ -211,7 +241,8 @@ function Footer() {
           <span className="text-ink-2">Uniswap v4 pools with the OnTop hook</span>
           {data && (
             <span className="num text-ink-3">
-              Indexed block {data.indexed.toLocaleString("en-US")} · ETH ${data.ethUsd.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+              Indexed block {data.indexed.toLocaleString("en-US")}
+              {data.ethUsd > 0 && ` · ETH $${data.ethUsd.toLocaleString("en-US", { maximumFractionDigits: 0 })}`}
             </span>
           )}
         </div>
