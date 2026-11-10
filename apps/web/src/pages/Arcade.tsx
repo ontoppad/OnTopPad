@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useStats, useTokens, type TokenSummary } from "../lib/api.ts";
 import { amount, eth, or, usd } from "../lib/format.ts";
+import { scrollToEl } from "../lib/scroll.ts";
 import { Art, ChangeText, Poster } from "../components/TokenCard.tsx";
 import { artSrc, ButtonLink, cx, Segmented, Skeleton, Stamp } from "../components/ui.tsx";
 
@@ -325,7 +326,7 @@ export default function Arcade() {
   };
   const pick = (s: Sort) => {
     setSort(s);
-    document.getElementById("board")?.scrollIntoView({ behavior: "smooth" });
+    scrollToEl(document.getElementById("board"));
   };
 
   if (isLoading || !tokens)

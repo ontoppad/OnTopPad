@@ -9,6 +9,8 @@ import { ago, eth, short } from "../lib/format.ts";
 import { useWallet } from "../lib/wallet.tsx";
 import { Button, cx, Pill, TokenArt, usePill } from "./ui.tsx";
 import { Splash } from "./Splash.tsx";
+import Lenis from "lenis";
+import { smooth } from "../lib/scroll.ts";
 
 const NAV = [
   { to: "/arcade", label: "Arcade", icon: Gamepad2 },
@@ -223,7 +225,7 @@ function MobileTabs() {
   const { pathname } = useLocation();
   const idx = tabs.findIndex((t) => pathname.startsWith(t.to));
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label="Main">
+    <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line bg-bg/95 pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Main">
       {/* positioned by column, not by a shared-layout animation: those measure against page scroll and fly in from below after a scroll reset */}
       {idx >= 0 && <span aria-hidden className="absolute top-0 h-0.5 w-8 rounded-full bg-lime transition-[left] duration-300 ease-out" style={{ left: `calc(${idx * 20 + 10}% - 16px)` }} />}
       {tabs.map(({ to, label, icon: Icon }) => (
@@ -255,13 +257,26 @@ export function Layout() {
   const pill = usePill(navRef, 'a[aria-current="page"]', pathname);
   // a wallet lookup on Rewards stays on the same page; anything else is a new screen
   const page = pathname.startsWith("/rewards") ? "/rewards" : pathname;
+  // every page scrolls on rails: wheel input eases instead of jumping. Touch keeps native momentum.
   useEffect(() => {
-    window.scrollTo(0, 0);
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // lerp 0.1 glides without trailing the wheel; nested scrollers (tables, carousels) keep their own wheel; #links ease too
+    const l = new Lenis({ autoRaf: true, lerp: 0.1, allowNestedScroll: true, anchors: true });
+    smooth.lenis = l;
+    return () => {
+      smooth.lenis = null;
+      l.destroy();
+    };
+  }, []);
+  useEffect(() => {
+    // a plain scrollTo would be undone by leftover inertia from the last page
+    if (smooth.lenis) smooth.lenis.scrollTo(0, { immediate: true, force: true });
+    else window.scrollTo(0, 0);
   }, [page]);
   return (
     <MotionConfig reducedMotion="user">
     <div className="min-h-dvh">
-      <header className="sticky top-0 z-40 border-b border-line bg-bg/90 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-line bg-bg/95">
         <div className="mx-auto flex h-16 items-center gap-4 px-4 md:px-6">
           <Link to="/" className="flex items-center gap-3 shrink-0" aria-label="ONTOPPAD home">
             <img src="/brand/logo-256.webp" alt="" width={36} height={36} className="rounded-lg" />

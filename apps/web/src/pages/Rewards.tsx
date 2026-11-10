@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { isAddress } from "viem";
 import { useLeaderboard, useStats, useWalletView } from "../lib/api.ts";
 import { txUrl } from "../lib/chain.ts";
+import { scrollToEl } from "../lib/scroll.ts";
 import { ago, amount, eth, isHouse, share, short, usd } from "../lib/format.ts";
 import { AreaChart } from "../components/Chart.tsx";
 import { Band, BandStat, Button, Card, cx, Heading, Num, PageHero, pill, Reveal, Skeleton, Stat, TierMeter, TokenArt } from "../components/ui.tsx";
@@ -11,7 +12,7 @@ function Lookup({ address }: { address: string }) {
   const { data, isLoading } = useWalletView(address.toLowerCase());
   const ref = useRef<HTMLDivElement>(null);
   const ready = !!data;
-  useEffect(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), [address, ready]);
+  useEffect(() => scrollToEl(ref.current), [address, ready]);
   if (isLoading || !data) return <Skeleton className="h-40" />;
   const nothing = !data.payoutsCount && !data.bonusTokens && !data.holdings.length;
   return (

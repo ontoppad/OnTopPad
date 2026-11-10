@@ -1,7 +1,6 @@
 import { Fragment, lazy, Suspense, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
 import { Link, useNavigate } from "react-router";
 import { animate, AnimatePresence, motion, useInView, useMotionValue, useMotionValueEvent, useScroll, useSpring, useTransform, type MotionValue } from "motion/react";
-import Lenis from "lenis";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatUnits, isAddress, parseEther } from "viem";
@@ -878,13 +877,6 @@ export default function Home() {
     setPill(null);
     nav(to);
   };
-  // the landing scrolls on rails: wheel input eases instead of jumping. Touch keeps native momentum.
-  useEffect(() => {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const lenis = new Lenis({ autoRaf: true, lerp: 0.085 });
-    return () => lenis.destroy();
-  }, []);
-
   return (
     <div>
       <Hud ready={list.length > 0} />
