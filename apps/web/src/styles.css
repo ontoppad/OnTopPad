@@ -1,0 +1,158 @@
+@import "tailwindcss";
+@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource-variable/jetbrains-mono";
+
+/* Arcade-at-night ramp: near-black with a faint olive cast from the logo's lime spill. */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0e0f0c;
+  --bg-deep: #0a0b08;
+  --card: #151612;
+  --raised: #1e2019;
+  --ink: #eef0e6;
+  --ink-2: #a7ab9b;
+  --ink-3: #868a7c;
+  --line: rgb(238 240 230 / 0.08);
+  --line-2: rgb(238 240 230 / 0.15);
+  --lime: #cbfd00;
+  --lime-ink: #0e0f0c;
+  --accent: #cbfd00;
+  --up: #cbfd00;
+  --down: #ff5a5f;
+  --down-ink: #ff7b7f;
+  --sticker-shadow: #000;
+  --highlight: inset 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f5f6f0;
+  --bg-deep: #ecede5;
+  --card: #ffffff;
+  --raised: #eef0e8;
+  --ink: #15170f;
+  --ink-2: #4f5347;
+  --ink-3: #6a6e62;
+  --line: rgb(21 23 15 / 0.09);
+  --line-2: rgb(21 23 15 / 0.17);
+  --lime: #cbfd00;
+  --lime-ink: #15170f;
+  --accent: #4f6600;
+  --up: #5e7a00;
+  --down: #d93a40;
+  --down-ink: #c62f35;
+  --sticker-shadow: #15170f;
+  --highlight: 0 1px 2px rgb(0 0 0 / 0.05);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-deep: var(--bg-deep);
+  --color-card: var(--card);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-lime: var(--lime);
+  --color-lime-ink: var(--lime-ink);
+  --color-accent: var(--accent);
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --color-down-ink: var(--down-ink);
+  --font-sans: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+::selection {
+  background: var(--lime);
+  color: var(--lime-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "zero" 0;
+}
+
+/* Signature: the "+X% on top" sticker, cut like the PAD box in the logo. Only where a bonus is quoted. */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--lime);
+  color: var(--lime-ink);
+  border: 2px solid var(--sticker-shadow);
+  box-shadow: 3px 3px 0 var(--sticker-shadow);
+  transform: rotate(-3deg) skewX(-8deg);
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+/* Arcade press: the button sits on a hard ledge and sinks into it when pressed. */
+.btn-press {
+  box-shadow: 0 3px 0 var(--sticker-shadow);
+  transition:
+    transform 140ms var(--ease-out),
+    box-shadow 140ms var(--ease-out),
+    background-color 140ms var(--ease-out);
+}
+.btn-press:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 0 var(--sticker-shadow);
+}
+.btn-press:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 var(--sticker-shadow);
+}
+.btn-press:disabled {
+  transform: none;
+  box-shadow: 0 3px 0 var(--sticker-shadow);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+input[type="range"] {
+  accent-color: var(--lime);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}

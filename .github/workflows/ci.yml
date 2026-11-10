@@ -1,0 +1,37 @@
+name: build
+
+on:
+  push:
+    branches: [main, testnet, mainnet]
+  pull_request:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build web (includes type check)
+        run: pnpm --filter @ontoppad/web build
+      - name: Build api bundle
+        run: pnpm --filter @ontoppad/api typecheck && pnpm --filter @ontoppad/api build
+
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+      - name: Build contracts
+        working-directory: contracts
+        run: forge build --sizes

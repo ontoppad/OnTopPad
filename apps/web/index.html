@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>ONTOPPAD · Start ahead. Stay paid.</title>
+    <meta name="description" content="A token launchpad on Robinhood Chain where every buy lands with bonus tokens on top and every holder is paid from trading activity. Every bonus and payout, public and verifiable." />
+    <meta name="theme-color" content="#0e0f0c" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/brand/favicon-64.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/brand/apple-touch-icon.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="ONTOPPAD · Start ahead. Stay paid." />
+    <meta property="og:description" content="Every buy lands with bonus tokens on top. Every holder is paid from the trading. Every number on-chain." />
+    <meta property="og:image" content="/brand/og.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@OnTopPad" />
+    <meta name="twitter:image" content="/brand/og.jpg" />
+    <script>
+      try {
+        var t = localStorage.getItem("ontop-theme");
+        if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

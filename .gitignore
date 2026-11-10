@@ -1,0 +1,29 @@
+# secrets — never commit
+.secrets/
+.env
+.env.*
+!.env.example
+
+# deps & builds
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+coverage/
+
+# foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+
+# runtime data
+apps/api/data/
+
+# os/editor
+.DS_Store
+.idea/
+.vscode/
+
+# source brand files (optimized copies live in apps/web/public/brand)
+/ontoppad-logo.png
+/ontoppad-x-banner.png

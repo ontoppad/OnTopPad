@@ -1,0 +1,24 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc_version = "0.8.26"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 800
+via_ir = true
+bytecode_hash = "none"
+# v4-core's PoolManager (tests only) needs its upstream optimizer settings to avoid stack-too-deep
+additional_compiler_profiles = [{ name = "v4core", via_ir = true, optimizer_runs = 44444444 }]
+compilation_restrictions = [{ paths = "lib/v4-periphery/lib/v4-core/src/PoolManager.sol", optimizer_runs = 44444444 }]
+fs_permissions = [{ access = "read-write", path = "./deployments" }]
+
+[fuzz]
+runs = 512
+
+[rpc_endpoints]
+robinhood_testnet = "https://rpc.testnet.chain.robinhood.com"
+robinhood = "https://rpc.mainnet.chain.robinhood.com"
+
+[fmt]
+line_length = 120
