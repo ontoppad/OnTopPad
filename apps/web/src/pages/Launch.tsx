@@ -110,7 +110,7 @@ export default function Launch() {
   }
 
   return (
-    <div className="mx-auto max-w-[1440px] px-4 pt-10 md:px-8">
+    <div className="mx-auto px-4 pt-10 md:px-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-[36px] leading-tight font-semibold tracking-tight">Launch a token</h1>
         <p className="max-w-2xl text-[15px] text-ink-2">Four steps. The last one deploys the token, seeds its Uniswap v4 pool, locks the bonus treasury and switches holder payouts on, all in one transaction from your wallet.</p>

@@ -130,7 +130,7 @@ export default function Home() {
   return (
     <div>
       {/* ── hero: split, text on the left, coin + live quote on the right */}
-      <section className="mx-auto grid max-w-[1440px] items-center gap-8 px-4 pt-12 md:px-8 lg:min-h-[min(calc(100dvh-100px),880px)] lg:grid-cols-[1fr_1.05fr] lg:pt-0">
+      <section className="mx-auto grid items-center gap-8 px-4 pt-12 md:px-6 lg:min-h-[min(calc(100dvh-100px),880px)] lg:grid-cols-[1fr_1.05fr] lg:pt-0">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }} className="flex flex-col gap-6">
           <span className="num text-[13px] text-ink-3">Token launchpad on Robinhood Chain</span>
           <h1 className="text-[44px] leading-[1.02] font-extrabold tracking-[-0.03em] sm:text-[64px] lg:text-[80px]">
@@ -170,7 +170,7 @@ export default function Home() {
       </section>
 
       {/* ── scoreboard */}
-      <section className="mx-auto max-w-[1440px] px-4 md:px-8">
+      <section className="mx-auto px-4 md:px-6">
         <div className="grid grid-cols-2 gap-6 rounded-2xl border border-line bg-card p-6 md:grid-cols-4 md:p-8">
           <Stat label="Tokens launched" value={stats?.tokens ?? 0} format={(v) => Math.round(v).toString()} empty="First launch pending" />
           <Stat label="Bonus paid on buys" value={stats?.bonusUsd ?? 0} format={usd} sub={stats ? `${amount(stats.bonusTokens)} tokens over ${stats.buys} buys` : undefined} empty="Waiting on the first buy" accent />
@@ -185,7 +185,7 @@ export default function Home() {
       </section>
 
       {/* ── pillars */}
-      <section className="mx-auto mt-24 max-w-[1440px] px-4 md:px-8">
+      <section className="mx-auto mt-24 px-4 md:px-6">
         <div className="mb-8 flex flex-col gap-2">
           <h2 className="text-[32px] leading-tight font-semibold tracking-tight md:text-[40px]">Three rules, enforced by code</h2>
           <p className="max-w-xl text-[15px] text-ink-2">No staking, no points, no claim buttons. The contracts do it on every trade.</p>
@@ -244,7 +244,7 @@ export default function Home() {
       </section>
 
       {/* ── hot tokens */}
-      <section className="mx-auto mt-24 max-w-[1440px] px-4 md:px-8">
+      <section className="mx-auto mt-24 px-4 md:px-6">
         <div className="mb-6 flex items-end justify-between gap-4">
           <div className="flex flex-col gap-2">
             <h2 className="text-[32px] leading-tight font-semibold tracking-tight">On the board now</h2>
@@ -262,7 +262,7 @@ export default function Home() {
       </section>
 
       {/* ── how a buy lands */}
-      <section className="mx-auto mt-24 max-w-[1440px] px-4 md:px-8">
+      <section className="mx-auto mt-24 px-4 md:px-6">
         <h2 className="mb-2 text-[32px] leading-tight font-semibold tracking-tight">What happens when you press buy</h2>
         <p className="mb-8 max-w-xl text-[15px] text-ink-2">One transaction, four contracts. The bonus and the trade settle together, so there is nothing to claim later.</p>
         <div className="grid gap-4 lg:grid-cols-2">
@@ -317,7 +317,7 @@ export default function Home() {
       </section>
 
       {/* ── contracts */}
-      <section className="mx-auto mt-24 max-w-[1440px] px-4 md:px-8">
+      <section className="mx-auto mt-24 px-4 md:px-6">
         <div className="mb-6 flex flex-col gap-2">
           <h2 className="text-[32px] leading-tight font-semibold tracking-tight">The contracts behind every number</h2>
           <p className="max-w-xl text-[15px] text-ink-2">Verified source on the Robinhood Chain explorer. Read them, call them, or rebuild the numbers yourself.</p>
@@ -326,7 +326,7 @@ export default function Home() {
       </section>
 
       {/* ── faq */}
-      <section className="mx-auto mt-24 grid max-w-[1440px] gap-8 px-4 md:px-8 lg:grid-cols-[1fr_1.4fr]">
+      <section className="mx-auto mt-24 grid gap-8 px-4 md:px-6 lg:grid-cols-[1fr_1.4fr]">
         <div className="flex flex-col gap-2">
           <h2 className="text-[32px] leading-tight font-semibold tracking-tight">Straight answers</h2>
           <p className="text-[15px] text-ink-2">The questions every degen asks first</p>
@@ -345,7 +345,7 @@ export default function Home() {
       </section>
 
       {/* ── final call */}
-      <section className="mx-auto mt-24 max-w-[1440px] px-4 md:px-8">
+      <section className="mx-auto mt-24 px-4 md:px-6">
         <div className="flex flex-col items-start gap-6 rounded-2xl border border-line bg-card p-8 md:flex-row md:items-center md:justify-between md:p-12">
           <div className="flex items-center gap-6">
             <img src="/brand/logo-256.webp" alt="" width={88} height={88} className="hidden rotate-[-4deg] rounded-xl sm:block" />

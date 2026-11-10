@@ -180,7 +180,7 @@ function Footer() {
   const { data } = useConfig();
   return (
     <footer className="mt-24 border-t border-line pb-24 md:pb-8">
-      <div className="mx-auto grid max-w-[1440px] gap-8 px-4 py-10 md:grid-cols-[1.2fr_1fr_1fr] md:px-8">
+      <div className="mx-auto grid gap-8 px-4 py-10 md:grid-cols-[1.2fr_1fr_1fr] md:px-6">
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <img src="/brand/logo-256.webp" alt="ONTOPPAD" width={40} height={40} className="rounded-lg" />
@@ -244,7 +244,7 @@ export function Layout() {
   return (
     <div className="min-h-dvh">
       <header className="sticky top-0 z-40 border-b border-line bg-bg/90 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-4 px-4 md:px-8">
+        <div className="mx-auto flex h-16 items-center gap-4 px-4 md:px-6">
           <Link to="/" className="flex items-center gap-3 shrink-0" aria-label="ONTOPPAD home">
             <img src="/brand/logo-256.webp" alt="" width={36} height={36} className="rounded-lg" />
             <span className="hidden sm:block text-[16px] font-semibold tracking-tight">ONTOPPAD</span>

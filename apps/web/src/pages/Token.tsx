@@ -166,11 +166,11 @@ export default function Token() {
         </ButtonLink>
       </div>
     );
-  if (isLoading || !t) return <div className="mx-auto max-w-[1440px] px-4 pt-10 md:px-8"><Skeleton className="h-[480px]" /></div>;
+  if (isLoading || !t) return <div className="mx-auto px-4 pt-10 md:px-6"><Skeleton className="h-[480px]" /></div>;
 
   const edge = buyerEdge(t.bonusBps) * 100;
   return (
-    <div className="mx-auto max-w-[1440px] px-4 pt-8 md:px-8">
+    <div className="mx-auto px-4 pt-8 md:px-6">
       <Link to="/arcade" className="inline-flex items-center gap-1 text-[13px] text-ink-3 hover:text-ink">
         <ArrowLeft size={14} strokeWidth={1.5} /> Arcade
       </Link>

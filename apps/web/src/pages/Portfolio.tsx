@@ -34,7 +34,7 @@ export default function Portfolio() {
   const next = data?.holdings.reduce((s, h) => s + h.nextPayout, 0) ?? 0;
 
   return (
-    <div className="mx-auto max-w-[1440px] px-4 pt-10 md:px-8">
+    <div className="mx-auto px-4 pt-10 md:px-6">
       <div className="flex flex-col gap-2">
         <span className="num text-[13px] text-ink-3">{own ? "P1 · your run" : "Player"}</span>
         <h1 className="num text-[30px] leading-tight font-semibold tracking-tight">{short(address)}</h1>

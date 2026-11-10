@@ -83,7 +83,7 @@ export default function Rewards() {
   const chartPoints = points.length >= 1 ? points : bonusPoints;
 
   return (
-    <div className="mx-auto max-w-[1440px] px-4 pt-10 md:px-8">
+    <div className="mx-auto px-4 pt-10 md:px-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div className="flex flex-col gap-2">
           <h1 className="text-[36px] leading-tight font-semibold tracking-tight">Rewards</h1>

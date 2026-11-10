@@ -43,7 +43,7 @@ function Calculator() {
 export default function Rules() {
   const { data: cfg } = useConfig();
   return (
-    <div className="mx-auto max-w-[1440px] px-4 pt-10 md:px-8">
+    <div className="mx-auto px-4 pt-10 md:px-6">
       <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr] lg:items-end">
         <div className="flex flex-col gap-4">
           <h1 className="text-[44px] leading-[1.05] font-extrabold tracking-[-0.03em] md:text-[56px]">

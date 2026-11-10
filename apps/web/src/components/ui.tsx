@@ -89,15 +89,21 @@ export function Stat({ label, value, format, sub, empty, accent }: { label: stri
   );
 }
 
+/** Our own uploads are served same-origin whichever host the app runs on; foreign art must be https. */
+export function artSrc(src?: string | null): string | null {
+  if (!src) return null;
+  if (src.includes("/api/media/")) return src.slice(src.indexOf("/api/media/"));
+  return src.startsWith("https://") ? src : null;
+}
+
 const hash = (s: string) => [...s.toLowerCase()].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 
 /** Token picture, or a deterministic 5×5 pixel sprite from the address when there is none. */
 export function TokenArt({ src, address, symbol, size = 48, className }: { src?: string | null; address: string; symbol: string; size?: number; className?: string }) {
   const [broken, setBroken] = useState(false);
   const r = Math.max(6, Math.round(size / 5));
-  // our own uploads are served same-origin, whichever host the app runs on
-  if (src?.includes("/api/media/")) src = src.slice(src.indexOf("/api/media/"));
-  if (src && !broken && (src.startsWith("https://") || src.startsWith("/api/media/"))) {
+  src = artSrc(src);
+  if (src && !broken) {
     return (
       <img
         src={src}
