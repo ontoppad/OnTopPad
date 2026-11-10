@@ -3,8 +3,8 @@ import { Link, useSearchParams } from "react-router";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useStats, useTokens, type TokenSummary } from "../lib/api.ts";
 import { amount, eth, or, usd } from "../lib/format.ts";
-import { ChangeText } from "../components/TokenCard.tsx";
-import { artSrc, ButtonLink, cx, Segmented, Skeleton, Stamp, TokenArt } from "../components/ui.tsx";
+import { Art, ChangeText, Poster } from "../components/TokenCard.tsx";
+import { artSrc, ButtonLink, cx, Segmented, Skeleton, Stamp } from "../components/ui.tsx";
 
 type Sort = "hot" | "new" | "mcap" | "bonus" | "pot" | "holders";
 const SORTS: { value: Sort; label: string }[] = [
@@ -24,16 +24,6 @@ const ORDER: Record<Sort, (a: TokenSummary, b: TokenSummary) => number> = {
   holders: (a, b) => b.holders - a.holders,
 };
 const PAGE = 12;
-
-/** Pixel art blown up edge to edge; it stays crisp because the browser scales it nearest-neighbour. */
-function Art({ t, className }: { t: TokenSummary; className?: string }) {
-  const src = artSrc(t.image);
-  return src ? (
-    <img src={src} alt="" loading="lazy" className={cx("h-full w-full object-cover [image-rendering:pixelated]", className)} />
-  ) : (
-    <TokenArt address={t.address} symbol={t.symbol} size={512} className={cx("!h-full !w-full !rounded-none", className)} />
-  );
-}
 
 // ───────────── hero ─────────────
 
@@ -263,19 +253,7 @@ function Board({ tokens, sort, setSort }: { tokens: TokenSummary[]; sort: Sort; 
 
       <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         {list.slice(0, shown).map((t) => (
-          <Link key={t.address} to={`/token/${t.address}`} className="group flex flex-col gap-2">
-            <div className="relative aspect-square overflow-hidden rounded-xl border border-line bg-raised transition-colors duration-150 group-hover:border-line-2">
-              <Art t={t} className="transition-transform duration-500 ease-out group-hover:scale-[1.04]" />
-              <Stamp bps={t.bonusBps} className="absolute left-2 top-2 text-[11px]" />
-              <span className="num absolute bottom-2 right-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] text-white">{usd(t.fdvUsd)}</span>
-            </div>
-            <span className="truncate text-[13px] text-ink">
-              {t.name} <span className="num text-ink-3">${t.symbol}</span>
-            </span>
-            <span className="num -mt-1 text-[12px] text-ink-3">
-              {or(t.holders, (n) => `${n} holders`, "first holder wins")} · {t.paid ? `${eth(t.paid)} paid` : "pot filling"}
-            </span>
-          </Link>
+          <Poster key={t.address} t={t} />
         ))}
       </div>
       {list.length === 0 && (

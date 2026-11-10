@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
-import { AnimatePresence, motion } from "motion/react";
+import { Link, NavLink, useLocation, useNavigate, useOutlet } from "react-router";
+import { AnimatePresence, motion, MotionConfig, useScroll, useSpring } from "motion/react";
 import { Activity, BookOpen, Gamepad2, Gift, Moon, Rocket, Search, Sun, UserRound, Wallet, X } from "lucide-react";
 import { formatEther } from "viem";
 import { useActivity, useConfig } from "../lib/api.ts";
@@ -222,10 +222,11 @@ function MobileTabs() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label="Main">
       {tabs.map(({ to, label, icon: Icon }) => (
-        <NavLink key={to} to={to} className={({ isActive }) => cx("flex h-14 flex-col items-center justify-center gap-1 text-[11px]", isActive ? "text-ink" : "text-ink-3")}>
+        <NavLink key={to} to={to} className={({ isActive }) => cx("relative flex h-14 flex-col items-center justify-center gap-1 text-[11px] transition-colors duration-150", isActive ? "text-ink" : "text-ink-3")}>
           {({ isActive }) => (
             <>
-              <Icon size={18} strokeWidth={1.5} className={isActive ? "text-accent" : undefined} />
+              {isActive && <motion.span layoutId="tab-dot" className="absolute top-0 h-0.5 w-8 rounded-full bg-lime" transition={{ type: "spring", bounce: 0.25, duration: 0.45 }} />}
+              <Icon size={18} strokeWidth={1.5} className={cx("transition-transform duration-200", isActive && "-translate-y-0.5 text-accent")} />
               {label}
             </>
           )}
@@ -235,13 +236,24 @@ function MobileTabs() {
   );
 }
 
+/** Lime reading bar along the bottom of the header. */
+function ScrollBar() {
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, { stiffness: 200, damping: 30 });
+  return <motion.div aria-hidden style={{ scaleX }} className="absolute inset-x-0 bottom-0 h-0.5 origin-left bg-lime" />;
+}
+
 export function Layout() {
   const [theme, toggle] = useTheme();
   const { pathname } = useLocation();
+  const outlet = useOutlet();
+  // a wallet lookup on Rewards stays on the same page; anything else is a new screen
+  const page = pathname.startsWith("/rewards") ? "/rewards" : pathname;
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [pathname]);
+  }, [page]);
   return (
+    <MotionConfig reducedMotion="user">
     <div className="min-h-dvh">
       <header className="sticky top-0 z-40 border-b border-line bg-bg/90 backdrop-blur">
         <div className="mx-auto flex h-16 items-center gap-4 px-4 md:px-6">
@@ -251,8 +263,13 @@ export function Layout() {
           </Link>
           <nav className="ml-4 hidden md:flex items-center gap-1" aria-label="Main">
             {NAV.map(({ to, label }) => (
-              <NavLink key={to} to={to} className={({ isActive }) => cx("h-8 rounded-lg px-3 text-[14px] leading-8 transition-colors duration-150", isActive ? "bg-raised text-ink shadow-[var(--highlight)]" : "text-ink-2 hover:text-ink")}>
-                {label}
+              <NavLink key={to} to={to} className={({ isActive }) => cx("relative h-8 rounded-full px-3 text-[14px] leading-8 transition-colors duration-150", isActive ? "font-semibold text-lime-ink" : "text-ink-2 hover:text-ink")}>
+                {({ isActive }) => (
+                  <>
+                    {isActive && <motion.span layoutId="nav-pill" className="absolute inset-0 rounded-full bg-lime" transition={{ type: "spring", bounce: 0.2, duration: 0.45 }} />}
+                    <span className="relative">{label}</span>
+                  </>
+                )}
               </NavLink>
             ))}
           </nav>
@@ -266,14 +283,23 @@ export function Layout() {
           </div>
         </div>
         <Ticker />
+        <ScrollBar />
       </header>
       <main>
-        <Outlet />
+        {/* the landing page keeps its own entrance; every other page slides in */}
+        {pathname === "/" ? (
+          outlet
+        ) : (
+          <motion.div key={page} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}>
+            {outlet}
+          </motion.div>
+        )}
       </main>
       <Footer />
       <MobileTabs />
       <WalletPicker />
     </div>
+    </MotionConfig>
   );
 }
 

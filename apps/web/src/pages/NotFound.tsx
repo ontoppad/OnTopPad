@@ -1,14 +1,17 @@
-import { ButtonLink } from "../components/ui.tsx";
+import { Link } from "react-router";
+import { PageHero, pill, pillGhost } from "../components/ui.tsx";
 
 export default function NotFound() {
   return (
-    <div className="mx-auto flex max-w-xl flex-col items-center gap-4 px-4 py-24 text-center">
-      <span className="num text-[13px] text-ink-3">404 · continue?</span>
-      <h1 className="text-[36px] font-semibold tracking-tight">This level doesn't exist</h1>
-      <p className="text-[15px] text-ink-2">The page moved or never launched</p>
-      <ButtonLink to="/" variant="primary" size="lg">
-        Back to start
-      </ButtonLink>
-    </div>
+    <PageHero kicker="404 · continue?" title="This level doesn't exist" sub="The page moved or never launched. The board is still live.">
+      <div className="flex flex-wrap justify-center gap-3">
+        <Link to="/arcade" className={pill}>
+          Back to the arcade
+        </Link>
+        <Link to="/" className={pillGhost}>
+          Start screen
+        </Link>
+      </div>
+    </PageHero>
   );
 }

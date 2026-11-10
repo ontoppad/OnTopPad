@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { Link } from "react-router";
+import { motion } from "motion/react";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import { TIERS } from "@ontoppad/shared";
 import { addressUrl } from "../lib/chain.ts";
 import { short, span } from "../lib/format.ts";
-import type { NextTier } from "../lib/api.ts";
+import { useTokens, type NextTier } from "../lib/api.ts";
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 export { cx };
@@ -193,25 +194,90 @@ export function TierMeter({ tier, next, compact }: { tier: keyof typeof TIER_IND
 }
 
 export function Segmented<T extends string>({ value, options, onChange, className }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; className?: string }) {
+  const id = useId();
   return (
-    <div className={cx("inline-flex rounded-[10px] border border-line bg-deep p-1 gap-1", className)} role="tablist">
+    <div className={cx("inline-flex gap-1 rounded-full border border-line bg-deep p-1", className)} role="tablist">
       {options.map((o) => (
         <button
           key={o.value}
           role="tab"
           aria-selected={value === o.value}
           onClick={() => onChange(o.value)}
-          className={cx(
-            "h-8 px-3 rounded-md text-[13px] transition-colors duration-150",
-            value === o.value ? "bg-raised text-ink shadow-[var(--highlight)]" : "text-ink-2 hover:text-ink",
-          )}
+          className={cx("relative h-8 whitespace-nowrap rounded-full px-4 text-[13px] transition-colors duration-150", value === o.value ? "font-semibold text-lime-ink" : "text-ink-2 hover:text-ink")}
         >
-          {o.label}
+          {value === o.value && <motion.span layoutId={`seg${id}`} className="absolute inset-0 rounded-full bg-lime" transition={{ type: "spring", bounce: 0.2, duration: 0.4 }} />}
+          <span className="relative">{o.label}</span>
         </button>
       ))}
     </div>
   );
 }
+
+const EASE = [0.22, 1, 0.36, 1] as const;
+
+/** Fades a block up the first time it scrolls into view. */
+export function Reveal({ children, className, delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
+  return (
+    <motion.div className={className} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-40px" }} transition={{ duration: 0.5, ease: EASE, delay }}>
+      {children}
+    </motion.div>
+  );
+}
+
+/** The arcade's page opener: full-bleed, a token's art blurred behind, the sticker logo and a big title. Falls back to the hottest token's art. */
+export function PageHero({ art, badge, kicker, title, sub, children }: { art?: string | null; badge?: ReactNode; kicker?: ReactNode; title: ReactNode; sub?: ReactNode; children?: ReactNode }) {
+  const { data: tokens } = useTokens();
+  const src = art?.startsWith("blob:") ? art : artSrc(art ?? tokens?.[0]?.image);
+  return (
+    <section className="relative isolate overflow-hidden border-b border-line">
+      {src && <motion.img key={src} src={src} alt="" aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 0.6 }} transition={{ duration: 0.8 }} className="absolute inset-0 -z-20 h-full w-full scale-125 object-cover blur-2xl [image-rendering:pixelated]" />}
+      <div className="absolute inset-0 -z-10 bg-bg/70" />
+      <div className="absolute inset-x-0 bottom-0 -z-10 h-24 bg-gradient-to-b from-transparent to-bg" />
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }} className="flex min-h-[300px] flex-col items-center justify-center gap-5 px-4 py-14 text-center md:min-h-[360px]">
+        {badge ?? <img src="/brand/logo-256.webp" alt="" width={64} height={64} className="rotate-[-4deg] rounded-xl border-2 border-[var(--sticker-shadow)] shadow-[4px_4px_0_var(--sticker-shadow)] transition-transform duration-300 hover:rotate-[4deg] hover:scale-110" />}
+        {kicker && <span className="num text-[13px] text-ink-3">{kicker}</span>}
+        <h1 className="text-[40px] leading-[1.02] font-extrabold tracking-[-0.03em] md:text-[60px]">{title}</h1>
+        {sub && <p className="max-w-xl text-[16px] leading-7 text-ink-2">{sub}</p>}
+        {children}
+      </motion.div>
+    </section>
+  );
+}
+
+/** Section title in the arcade's voice. */
+export function Heading({ title, sub, center, className }: { title: ReactNode; sub?: ReactNode; center?: boolean; className?: string }) {
+  return (
+    <div className={cx(center && "text-center", className)}>
+      <h2 className="text-[30px] leading-tight font-semibold tracking-tight">{title}</h2>
+      {sub && <p className={cx("text-[15px] text-ink-2", center ? "mt-2" : "mt-1")}>{sub}</p>}
+    </div>
+  );
+}
+
+/** The slanted lime band from the arcade spotlight, cut like the PAD box in the logo. Copy on it is lime-ink. */
+export function Band({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <section className={cx("relative isolate px-4 pb-14 pt-20 text-lime-ink md:px-[6%] md:pt-28", className)}>
+      <div aria-hidden className="absolute inset-0 -z-10 bg-lime [clip-path:polygon(0_22%,100%_0,100%_100%,0_100%)]" />
+      {children}
+    </section>
+  );
+}
+
+/** A big figure sitting on the lime band. */
+export function BandStat({ label, value, format, sub, empty }: { label: string; value: number; format: (v: number) => string; sub?: ReactNode; empty: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[13px] opacity-70">{label}</span>
+      {value > 0 ? <Num value={value} format={format} className="text-[28px] leading-tight font-semibold tracking-tight md:text-[36px]" /> : <span className="text-[22px] leading-tight font-semibold md:text-[28px]">{empty}</span>}
+      {sub && <span className="num text-[12px] opacity-70">{sub}</span>}
+    </div>
+  );
+}
+
+/** Rounded lime call-to-action, the arcade's "press start". */
+export const pill = "btn-press inline-flex h-11 items-center gap-2 rounded-full border-2 border-[var(--sticker-shadow)] bg-lime px-5 text-[14px] font-semibold text-lime-ink";
+export const pillGhost = "inline-flex h-11 items-center gap-2 rounded-full border border-line-2 bg-card px-5 text-[14px] text-ink transition-colors duration-150 hover:bg-raised";
 
 export function Skeleton({ className }: { className?: string }) {
   return <div className={cx("rounded-xl bg-raised/70", className)} />;

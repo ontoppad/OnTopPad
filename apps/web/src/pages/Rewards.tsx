@@ -1,18 +1,21 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { isAddress } from "viem";
 import { useLeaderboard, useStats, useWalletView } from "../lib/api.ts";
 import { txUrl } from "../lib/chain.ts";
 import { ago, amount, eth, isHouse, share, short, usd } from "../lib/format.ts";
 import { AreaChart } from "../components/Chart.tsx";
-import { Button, Card, Num, Skeleton, Stat, TierMeter, TokenArt } from "../components/ui.tsx";
+import { Band, BandStat, Button, Card, cx, Heading, Num, PageHero, pill, Reveal, Skeleton, Stat, TierMeter, TokenArt } from "../components/ui.tsx";
 
 function Lookup({ address }: { address: string }) {
   const { data, isLoading } = useWalletView(address.toLowerCase());
+  const ref = useRef<HTMLDivElement>(null);
+  const ready = !!data;
+  useEffect(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), [address, ready]);
   if (isLoading || !data) return <Skeleton className="h-40" />;
   const nothing = !data.payoutsCount && !data.bonusTokens && !data.holdings.length;
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={ref} className="flex scroll-mt-32 flex-col gap-4 text-left">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card className="p-5">
           <Stat label="Bonus tokens received" value={data.bonusUsd} format={usd} sub={data.bonusTokens > 0 ? `${amount(data.bonusTokens)} tokens at today's price` : undefined} empty="No bonus yet, first buy gets it" />
@@ -56,7 +59,7 @@ function Lookup({ address }: { address: string }) {
       {data.holdings.length > 0 && (
         <div className="grid gap-2">
           {data.holdings.map((h) => (
-            <Link key={h.token} to={`/token/${h.token}`} className="flex flex-wrap items-center gap-4 rounded-xl border border-line bg-card px-4 py-3 hover:border-line-2 transition-colors duration-150">
+            <Link key={h.token} to={`/token/${h.token}`} className="flex flex-wrap items-center gap-4 rounded-xl border border-line bg-card px-4 py-3 transition-[border-color,transform] duration-200 hover:-translate-y-px hover:border-line-2">
               <TokenArt src={h.image} address={h.token} symbol={h.symbol} size={32} />
               <span className="w-24 num text-[13px]">${h.symbol}</span>
               <TierMeter tier={h.tier} next={h.next} />
@@ -83,84 +86,78 @@ export default function Rewards() {
   const chartPoints = points.length >= 1 ? points : bonusPoints;
 
   return (
-    <div className="mx-auto px-4 pt-10 md:px-6">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-[36px] leading-tight font-semibold tracking-tight">Rewards</h1>
-          <p className="max-w-2xl text-[15px] text-ink-2">Everything the pad has paid out, rebuilt from on-chain events. Check any wallet below.</p>
-        </div>
+    <div>
+      <PageHero
+        title="Rewards"
+        sub="Everything the pad has paid out, rebuilt from on-chain events. Bonus on every buy, ETH to every holder."
+      >
+        <a href="#check" className={pill}>
+          Check a wallet
+        </a>
         {s && <span className="num text-[12px] text-ink-3">Indexed to block {s.indexed.toLocaleString("en-US")}</span>}
-      </div>
+      </PageHero>
 
-      <div className="mt-8 grid gap-4 md:grid-cols-3">
-        <Card className="p-6">
-          <Stat label="Bonus tokens paid on buys" value={s?.bonusUsd ?? 0} format={usd} sub={s ? `${amount(s.bonusTokens)} tokens over ${s.buys} buys, at today's prices` : undefined} empty="First buy pending" />
-        </Card>
-        <Card className="p-6">
-          <Stat label="Paid to holders" value={s?.paid ?? 0} format={(v) => eth(v)} sub={s?.paid ? `${s.rounds} rounds · ${s.payments} payments · ${s.paidWallets} wallets` : undefined} empty="Round 1 filling" accent />
-        </Card>
-        <Card className="p-6">
-          <Stat label="In the pots right now" value={s?.pot ?? 0} format={(v) => eth(v)} sub={s ? `${usd(s.potUsd)} waiting for the next rounds` : undefined} empty="Fills with the next buy" />
-        </Card>
-      </div>
+      <Band className="mt-10">
+        <div className="grid gap-8 md:grid-cols-3">
+          <BandStat label="Bonus tokens paid on buys" value={s?.bonusUsd ?? 0} format={usd} sub={s ? `${amount(s.bonusTokens)} tokens over ${s.buys} buys, at today's prices` : undefined} empty="First buy pending" />
+          <BandStat label="Paid to holders" value={s?.paid ?? 0} format={(v) => eth(v)} sub={s?.paid ? `${s.rounds} rounds · ${s.payments} payments · ${s.paidWallets} wallets` : undefined} empty="Round 1 filling" />
+          <BandStat label="In the pots right now" value={s?.pot ?? 0} format={(v) => eth(v)} sub={s ? `${usd(s.potUsd)} waiting for the next rounds` : undefined} empty="Fills with the next buy" />
+        </div>
+      </Band>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <Card className="p-6">
-          <div className="mb-4 flex items-baseline justify-between">
-            <span className="text-[14px] font-medium">{points.length ? "Holder payouts, cumulative ETH" : "Bonus paid to buyers, cumulative USD"}</span>
-            {s && <Num value={points.length ? s.paid : s.bonusUsd} format={points.length ? (v) => eth(v) : usd} className="text-[14px] text-ink-2" />}
-          </div>
-          {chartPoints.length ? <AreaChart points={chartPoints.length === 1 ? [{ t: chartPoints[0]!.t - 86_400, v: 0 }, chartPoints[0]!] : chartPoints} format={points.length ? (v) => eth(v, "") : usd} /> : <Skeleton className="h-[280px]" />}
-        </Card>
-        <Card className="p-6">
-          <span className="text-[14px] font-medium">High scores</span>
-          <p className="mt-1 text-[13px] text-ink-3">{lb?.earners.length ? "Most ETH received from holder payouts" : "Most bonus received on buys, at today's prices"}</p>
-          <ol className="mt-4 flex flex-col gap-1">
-            {(lb?.earners.length ? lb.earners : []).slice(0, 8).map((e, i) => (
-              <li key={e.account}>
-                <Link to={isHouse(e.account) ? "/rules" : `/rewards/${e.account}`} className="flex h-9 items-center gap-3 rounded-lg px-2 hover:bg-raised transition-colors duration-150">
-                  <span className={`num w-6 text-[12px] ${i === 0 ? "text-accent" : "text-ink-3"}`}>{String(i + 1).padStart(2, "0")}</span>
-                  <span className="num flex-1 text-[13px] text-ink-2">{short(e.account)}</span>
-                  <span className="num text-[13px]">{eth(e.amount)}</span>
-                </Link>
-              </li>
-            ))}
-            {!lb?.earners.length &&
-              (lb?.bonus ?? []).slice(0, 8).map((e, i) => (
+      <section className="grid gap-6 px-4 py-16 md:px-6 lg:grid-cols-[2fr_1fr]">
+        <Reveal>
+          <Card className="h-full p-6">
+            <div className="mb-4 flex items-baseline justify-between">
+              <span className="text-[17px] font-semibold">{points.length ? "Holder payouts, cumulative ETH" : "Bonus paid to buyers, cumulative USD"}</span>
+              {s && <Num value={points.length ? s.paid : s.bonusUsd} format={points.length ? (v) => eth(v) : usd} className="text-[14px] text-ink-2" />}
+            </div>
+            {chartPoints.length ? <AreaChart points={chartPoints.length === 1 ? [{ t: chartPoints[0]!.t - 86_400, v: 0 }, chartPoints[0]!] : chartPoints} format={points.length ? (v) => eth(v, "") : usd} /> : <Skeleton className="h-[280px]" />}
+          </Card>
+        </Reveal>
+        <Reveal delay={0.08}>
+          <Card className="h-full p-6">
+            <span className="text-[17px] font-semibold">High scores</span>
+            <p className="mt-1 text-[13px] text-ink-3">{lb?.earners.length ? "Most ETH received from holder payouts" : "Most bonus received on buys, at today's prices"}</p>
+            <ol className="mt-4 flex flex-col gap-1">
+              {(lb?.earners.length
+                ? lb.earners.slice(0, 8).map((e) => ({ account: e.account, v: eth(e.amount) }))
+                : (lb?.bonus ?? []).slice(0, 8).map((e) => ({ account: e.account, v: `${usd(e.valueUsd)} bonus` }))
+              ).map((e, i) => (
                 <li key={e.account}>
-                  <Link to={isHouse(e.account) ? "/rules" : `/rewards/${e.account}`} className="flex h-9 items-center gap-3 rounded-lg px-2 hover:bg-raised transition-colors duration-150">
-                    <span className="num w-6 text-[12px] text-ink-3">{String(i + 1).padStart(2, "0")}</span>
-                    <span className="num flex-1 text-[13px] text-ink-2">{short(e.account)}</span>
-                    <span className="num text-[13px]">{usd(e.valueUsd)} bonus</span>
+                  <Link to={isHouse(e.account) ? "/rules" : `/rewards/${e.account}`} className="group flex h-10 items-center gap-3 rounded-full px-3 transition-[background-color,transform] duration-200 hover:translate-x-1 hover:bg-raised">
+                    <span className={cx("num grid size-6 place-items-center rounded-full text-[11px]", i === 0 ? "bg-lime font-semibold text-lime-ink" : i < 3 ? "border border-line-2 text-ink" : "text-ink-3")}>{i + 1}</span>
+                    <span className="num flex-1 text-[13px] text-ink-2 group-hover:text-ink">{short(e.account)}</span>
+                    <span className="num text-[13px]">{e.v}</span>
                   </Link>
                 </li>
               ))}
-          </ol>
-        </Card>
-      </div>
+            </ol>
+          </Card>
+        </Reveal>
+      </section>
 
-      <Card className="mt-4 p-6">
-        <span className="text-[14px] font-medium">Check a wallet</span>
-        <p className="mt-1 text-[13px] text-ink-3">Bonus tokens and holder payouts a wallet has received, per token, since the pad opened</p>
+      <section id="check" className="scroll-mt-28 border-t border-line bg-deep px-4 py-16 md:px-6">
+        <Heading center title="Check a wallet" sub="Bonus tokens and holder payouts a wallet has received, per token, since the pad opened" />
         <form
-          className="mt-4 flex flex-col gap-2 sm:flex-row"
+          className="mx-auto mt-8 flex max-w-2xl flex-col gap-2 sm:flex-row"
           onSubmit={(e) => {
             e.preventDefault();
             if (isAddress(v.trim())) nav(`/rewards/${v.trim()}`);
           }}
         >
-          <input value={v} onChange={(e) => setV(e.target.value)} placeholder="0x wallet address" aria-label="Wallet address" className="num h-10 flex-1 rounded-[10px] border border-line-2 bg-deep px-3 text-[13px] placeholder:text-ink-3 focus:outline-none focus:border-[var(--accent)]" />
-          <Button type="submit" variant="primary" disabled={!isAddress(v.trim())}>
+          <input value={v} onChange={(e) => setV(e.target.value)} placeholder="0x wallet address" aria-label="Wallet address" className="num h-11 flex-1 rounded-full border border-line-2 bg-card px-5 text-[13px] placeholder:text-ink-3 focus:border-[var(--accent)] focus:outline-none" />
+          <Button type="submit" variant="primary" disabled={!isAddress(v.trim())} className="h-11 rounded-full px-6">
             Look up
           </Button>
         </form>
         {address && isAddress(address) && (
-          <div className="mt-6">
+          <div className="mt-10">
             <Lookup address={address} />
           </div>
         )}
-      </Card>
-      <p className="mt-3 text-[12px] text-ink-3">Bonus tokens are valued at today's prices. Holder payouts are shown in the pair asset they were paid in.</p>
+        <p className="mt-6 text-center text-[12px] text-ink-3">Bonus tokens are valued at today's prices. Holder payouts are shown in the pair asset they were paid in.</p>
+      </section>
     </div>
   );
 }

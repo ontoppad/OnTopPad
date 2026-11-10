@@ -1,9 +1,30 @@
 import { Link, useParams } from "react-router";
-import { useWalletView } from "../lib/api.ts";
+import { useWalletView, type WalletView } from "../lib/api.ts";
 import { txUrl } from "../lib/chain.ts";
 import { ago, amount, eth, share, short, usd } from "../lib/format.ts";
 import { useWallet } from "../lib/wallet.tsx";
-import { AddressChip, Button, ButtonLink, Card, Skeleton, Stat, TierMeter, TokenArt } from "../components/ui.tsx";
+import { Art } from "../components/TokenCard.tsx";
+import { AddressChip, Band, BandStat, Card, Heading, PageHero, pill, pillGhost, Reveal, Skeleton, Stamp, TierMeter } from "../components/ui.tsx";
+
+/** A bag on the shelf: the token's poster with your value on it, your tier and your next cut underneath. */
+function Bag({ h }: { h: WalletView["holdings"][number] }) {
+  return (
+    <Link to={`/token/${h.token}`} className="group flex flex-col gap-2">
+      <div className="relative aspect-square overflow-hidden rounded-xl border border-line bg-raised transition-[transform,border-color,box-shadow] duration-300 ease-out group-hover:-translate-y-1 group-hover:border-[var(--sticker-shadow)] group-hover:shadow-[4px_4px_0_var(--sticker-shadow)]">
+        <Art t={{ image: h.image, address: h.token, symbol: h.symbol }} className="transition-transform duration-500 ease-out group-hover:scale-[1.06]" />
+        <Stamp bps={h.bonusBps} className="absolute left-2 top-2 text-[11px]" />
+        <span className="num absolute bottom-2 right-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] text-white">{usd(h.valueUsd)}</span>
+      </div>
+      <span className="truncate text-[13px] text-ink">
+        {h.name} <span className="num text-ink-3">${h.symbol}</span>
+      </span>
+      <TierMeter tier={h.tier} compact />
+      <span className="num text-[12px] text-ink-3">
+        {amount(h.balance)} · <span className="text-accent">{h.nextPayout > 0 ? `${eth(h.nextPayout)} next` : `${share(h.share)} share`}</span>
+      </span>
+    </Link>
+  );
+}
 
 export default function Portfolio() {
   const params = useParams();
@@ -14,78 +35,76 @@ export default function Portfolio() {
 
   if (!address) {
     return (
-      <div className="mx-auto flex max-w-xl flex-col items-center gap-4 px-4 py-24 text-center">
-        <img src="/brand/logo-256.webp" alt="" width={96} height={96} className="rotate-[-4deg] rounded-xl" />
-        <h1 className="text-[28px] font-semibold">Player one, insert coin</h1>
-        <p className="text-[15px] text-ink-2">Connect a wallet to see your bags, your hold-time tiers and every payout you've received</p>
-        <div className="flex gap-3">
-          <Button variant="primary" size="lg" onClick={w.openPicker}>
+      <PageHero title="Player one, insert coin" sub="Connect a wallet to see your bags, your hold-time tiers and every payout you've received">
+        <div className="flex flex-wrap justify-center gap-3">
+          <button onClick={w.openPicker} className={pill}>
             Insert coin
-          </Button>
-          <ButtonLink to="/rewards" variant="secondary" size="lg">
+          </button>
+          <Link to="/rewards" className={pillGhost}>
             Look up any wallet
-          </ButtonLink>
+          </Link>
         </div>
-      </div>
+      </PageHero>
     );
   }
 
-  const value = data?.holdings.reduce((s, h) => s + h.valueUsd, 0) ?? 0;
-  const next = data?.holdings.reduce((s, h) => s + h.nextPayout, 0) ?? 0;
+  const bags = [...(data?.holdings ?? [])].sort((a, b) => b.valueUsd - a.valueUsd);
+  const value = bags.reduce((s, h) => s + h.valueUsd, 0);
+  const next = bags.reduce((s, h) => s + h.nextPayout, 0);
 
   return (
-    <div className="mx-auto px-4 pt-10 md:px-6">
-      <div className="flex flex-col gap-2">
-        <span className="num text-[13px] text-ink-3">{own ? "P1 · your run" : "Player"}</span>
-        <h1 className="num text-[30px] leading-tight font-semibold tracking-tight">{short(address)}</h1>
-        <AddressChip address={address} label="View on explorer" />
-      </div>
+    <div>
+      <PageHero art={bags[0]?.image} kicker={own ? "P1 · your run" : "Player profile"} title={<span className="num text-[34px] md:text-[52px]">{short(address)}</span>}>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <AddressChip address={address} label="View on explorer" className="rounded-full border border-line-2 bg-card/80 px-3 py-1 backdrop-blur" />
+          <Link to={`/rewards/${address}`} className="rounded-full border border-line-2 bg-card/80 px-3 py-1.5 text-[13px] text-ink-2 backdrop-blur transition-colors duration-150 hover:text-ink">
+            Rewards breakdown
+          </Link>
+        </div>
+      </PageHero>
 
       {isLoading || !data ? (
-        <Skeleton className="mt-8 h-64" />
+        <div className="px-4 py-10 md:px-6">
+          <Skeleton className="h-64" />
+        </div>
       ) : (
         <>
-          <div className="mt-8 grid grid-cols-2 gap-6 rounded-2xl border border-line bg-card p-6 md:grid-cols-4">
-            <Stat label="Bag value" value={value} format={usd} sub={data.holdings.length ? `${data.holdings.length} tokens` : undefined} empty="Empty bag" />
-            <Stat label="Next payouts" value={next} format={(v) => eth(v)} sub={next > 0 ? "estimated share of current pots" : undefined} empty="Hold to qualify" accent />
-            <Stat label="Payouts received" value={data.payoutsTotal} format={(v) => eth(v)} sub={data.payoutsCount ? `${data.payoutsCount} payments` : undefined} empty="First round soon" />
-            <Stat label="Bonus received" value={data.bonusUsd} format={usd} sub={data.bonusTokens ? `${amount(data.bonusTokens)} tokens` : undefined} empty="Buy to get it" />
-          </div>
+          <Band className="mt-10">
+            <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+              <BandStat label="Bag value" value={value} format={usd} sub={bags.length ? `${bags.length} tokens` : undefined} empty="Empty bag" />
+              <BandStat label="Next payouts" value={next} format={(v) => eth(v)} sub={next > 0 ? "estimated share of current pots" : undefined} empty="Hold to qualify" />
+              <BandStat label="Payouts received" value={data.payoutsTotal} format={(v) => eth(v)} sub={data.payoutsCount ? `${data.payoutsCount} payments` : undefined} empty="First round soon" />
+              <BandStat label="Bonus received" value={data.bonusUsd} format={usd} sub={data.bonusTokens ? `${amount(data.bonusTokens)} tokens` : undefined} empty="Buy to get it" />
+            </div>
+          </Band>
 
-          <h2 className="mt-12 text-[22px] font-semibold">Bags and tiers</h2>
-          <div className="mt-4 grid gap-2">
-            {data.holdings.map((h) => (
-              <Link key={h.token} to={`/token/${h.token}`} className="grid items-center gap-3 rounded-xl border border-line bg-card px-4 py-4 transition-colors duration-150 hover:border-line-2 md:grid-cols-[2fr_2fr_1fr_1fr_1fr]">
-                <span className="flex items-center gap-3">
-                  <TokenArt src={h.image} address={h.token} symbol={h.symbol} size={36} />
-                  <span className="flex flex-col">
-                    <span className="text-[14px] font-medium">{h.name}</span>
-                    <span className="num text-[12px] text-ink-3">${h.symbol}</span>
-                  </span>
-                </span>
-                <TierMeter tier={h.tier} next={h.next} />
-                <span className="num text-[13px] md:text-right">{amount(h.balance)}</span>
-                <span className="num text-[13px] text-ink-2 md:text-right">{usd(h.valueUsd)}</span>
-                <span className="num text-[13px] text-accent md:text-right">{h.nextPayout > 0 ? `${eth(h.nextPayout)} next` : `${share(h.share)} share`}</span>
-              </Link>
-            ))}
-            {data.holdings.length === 0 && (
-              <Card className="flex flex-col items-start gap-3 p-6">
-                <p className="text-[15px]">{own ? "No bags yet. Every buy comes with a head start." : "This wallet holds no OnTop tokens right now."}</p>
-                <ButtonLink to="/arcade" variant="primary">
+          <section className="px-4 py-16 md:px-6">
+            <Heading title="Bags and tiers" sub={bags.length ? "Biggest bag first · hold longer to climb from Rookie to Legend" : undefined} />
+            {bags.length ? (
+              <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                {bags.map((h, i) => (
+                  <Reveal key={h.token} delay={Math.min(i, 8) * 0.04}>
+                    <Bag h={h} />
+                  </Reveal>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-6 flex flex-col items-center gap-4 rounded-2xl border border-line bg-card p-12 text-center">
+                <p className="text-[18px]">{own ? "No bags yet. Every buy comes with a head start." : "This wallet holds no OnTop tokens right now."}</p>
+                <Link to="/arcade" className={pill}>
                   Find a token
-                </ButtonLink>
-              </Card>
+                </Link>
+              </div>
             )}
-          </div>
+          </section>
 
-          <div className="mt-12 grid gap-6 lg:grid-cols-2">
-            <div>
-              <h2 className="text-[22px] font-semibold">Payouts</h2>
-              <Card className="mt-4 overflow-hidden">
+          <section className="grid gap-6 border-t border-line bg-deep px-4 py-16 md:px-6 lg:grid-cols-2">
+            <Reveal>
+              <Heading title="Payouts" sub="Pushed to the wallet every round, nothing to claim" />
+              <Card className="mt-6 overflow-hidden">
                 {data.payouts.length ? (
                   data.payouts.slice(0, 20).map((p) => (
-                    <a key={`${p.tx}${p.token}`} href={txUrl(p.tx)} target="_blank" rel="noreferrer" className="flex items-center justify-between border-b border-line px-5 py-3 text-[13px] last:border-0 hover:bg-raised/50">
+                    <a key={`${p.tx}${p.token}`} href={txUrl(p.tx)} target="_blank" rel="noreferrer" className="flex items-center justify-between border-b border-line px-5 py-3 text-[13px] transition-colors duration-150 last:border-0 hover:bg-raised">
                       <span>
                         ${p.symbol} <span className="num text-ink-3">round {p.round}</span>
                       </span>
@@ -94,16 +113,16 @@ export default function Portfolio() {
                     </a>
                   ))
                 ) : (
-                  <p className="p-5 text-[14px] text-ink-2">Payouts land here automatically after each round. Nothing to claim.</p>
+                  <p className="p-5 text-[14px] text-ink-2">Payouts land here automatically after each round</p>
                 )}
               </Card>
-            </div>
-            <div>
-              <h2 className="text-[22px] font-semibold">Trades</h2>
-              <Card className="mt-4 overflow-hidden">
+            </Reveal>
+            <Reveal delay={0.08}>
+              <Heading title="Trades" sub="Every buy shows the bonus that came with it" />
+              <Card className="mt-6 overflow-hidden">
                 {data.trades.length ? (
                   data.trades.slice(0, 20).map((t) => (
-                    <a key={`${t.tx}${t.ts}`} href={txUrl(t.tx)} target="_blank" rel="noreferrer" className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 border-b border-line px-5 py-3 text-[13px] last:border-0 hover:bg-raised/50">
+                    <a key={`${t.tx}${t.ts}`} href={txUrl(t.tx)} target="_blank" rel="noreferrer" className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 border-b border-line px-5 py-3 text-[13px] transition-colors duration-150 last:border-0 hover:bg-raised">
                       <span className={t.side === "buy" ? "text-up" : "text-down-ink"}>{t.side === "buy" ? "Buy" : "Sell"}</span>
                       <span className="num text-ink-2">{amount(t.tokenAmount)}</span>
                       <span className="num text-accent">{t.bonus > 0 ? `+${amount(t.bonus)}` : ""}</span>
@@ -111,11 +130,11 @@ export default function Portfolio() {
                     </a>
                   ))
                 ) : (
-                  <p className="p-5 text-[14px] text-ink-2">No trades yet</p>
+                  <p className="p-5 text-[14px] text-ink-2">The first trade shows up here a few seconds after it lands</p>
                 )}
               </Card>
-            </div>
-          </div>
+            </Reveal>
+          </section>
         </>
       )}
     </div>
