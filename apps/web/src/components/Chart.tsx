@@ -164,18 +164,3 @@ export function AreaChart({ points, format, height = 280 }: { points: { t: numbe
 
   return <div ref={el} style={{ height }} />;
 }
-
-/** Tiny trend line for token cards: start price to now. */
-export function Spark({ values, width = 96, height = 32 }: { values: number[]; width?: number; height?: number }) {
-  if (values.length < 2) return null;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-  const d = values.map((v, i) => `${i === 0 ? "M" : "L"}${((i / (values.length - 1)) * width).toFixed(1)},${(height - 2 - ((v - min) / span) * (height - 4)).toFixed(1)}`).join(" ");
-  const up = values[values.length - 1]! >= values[0]!;
-  return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden className="overflow-visible">
-      <path d={d} fill="none" stroke={up ? "var(--up)" : "var(--down)"} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
-  );
-}

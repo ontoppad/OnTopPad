@@ -1,23 +1,533 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Link, useNavigate } from "react-router";
-import { motion } from "motion/react";
+import { animate, AnimatePresence, motion, useMotionValue, useMotionValueEvent, useScroll, useSpring, useTransform, type MotionValue } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, ArrowDown } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatUnits, isAddress, parseEther } from "viem";
-import { TIERS, TREASURY_BPS, HOLDERS_BPS, CREATOR_BPS, PLATFORM_BPS, feeFor } from "@ontoppad/shared";
-import { useStats, useTokens, useConfig, type TokenSummary } from "../lib/api.ts";
-import { quote, txUrl } from "../lib/chain.ts";
-import { amount, ago, eth, usd } from "../lib/format.ts";
-import { ButtonLink, Card, Num, Stamp, Stat, TokenArt, Button } from "../components/ui.tsx";
-import { TokenCard } from "../components/TokenCard.tsx";
+import { CREATOR_BPS, HOLDERS_BPS, MAX_BONUS_BPS, MIN_BONUS_BPS, PLATFORM_BPS, TIERS, TREASURY_BPS } from "@ontoppad/shared";
+import { useConfig, useStats, useTokens, type TokenSummary } from "../lib/api.ts";
+import { quote } from "../lib/chain.ts";
+import { ago, amount, eth, or, usd } from "../lib/format.ts";
+import { Art } from "../components/TokenCard.tsx";
 import { ContractsTable } from "../components/Contracts.tsx";
+import { cx, Segmented, Stamp, TokenArt, useTween } from "../components/ui.tsx";
+import type { Hover } from "../components/CrtScene.tsx";
 
-const CoinScene = lazy(() => import("../components/CoinScene.tsx"));
-const AMOUNTS = ["0.001", "0.005", "0.01"];
+const CrtScene = lazy(() => import("../components/CrtScene.tsx"));
 
-/** Live quote for the house token — the product view under the coin. */
-function QuoteCard({ token, step, ethUsd }: { token?: TokenSummary; step: number; ethUsd: number }) {
-  const amountIn = AMOUNTS[step % AMOUNTS.length]!;
+const EASE = [0.22, 1, 0.36, 1] as const;
+const two = (n: number) => String(n).padStart(2, "0");
+const btn = "btn-press inline-flex h-11 items-center gap-2 rounded-xl border-2 border-[var(--sticker-shadow)] bg-lime px-5 text-[14px] font-semibold text-lime-ink";
+const btnGhost = "inline-flex h-11 items-center gap-2 rounded-xl border border-white/35 bg-black/30 px-5 text-[14px] text-ink backdrop-blur transition-colors duration-150 hover:border-white/70 hover:bg-black/50";
+// the landing's screening rooms; the header plus ticker above them is 100px
+const ROOM = "stage-dark relative isolate h-[calc(100svh-100px)] min-h-[600px] overflow-hidden";
+
+// ───────────── chrome: camera HUD and cursor label ─────────────
+
+/** The viewfinder the whole landing is shot through: frame rate, live block, date and clock. */
+function Hud() {
+  const { data: cfg } = useConfig();
+  const [fps, setFps] = useState<number>();
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    let frames = 0;
+    let last = performance.now();
+    let raf = 0;
+    const tick = (t: number) => {
+      frames++;
+      if (t - last >= 500) {
+        setFps(Math.round((frames * 1000) / (t - last)));
+        setNow(new Date());
+        frames = 0;
+        last = t;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  const corner = "absolute size-5 border-white/70";
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-x-3 bottom-4 top-[110px] z-30 font-mono text-[11px] text-white mix-blend-difference md:inset-x-4 md:text-[12px]">
+      <span className={cx(corner, "left-0 top-0 rounded-tl-lg border-l border-t")} />
+      <span className={cx(corner, "right-0 top-0 rounded-tr-lg border-r border-t")} />
+      {/* on a phone the bottom of every room is busy with buttons; the frame keeps only its top */}
+      <span className={cx(corner, "bottom-0 left-0 hidden rounded-bl-lg border-b border-l md:block")} />
+      <span className={cx(corner, "bottom-0 right-0 hidden rounded-br-lg border-b border-r md:block")} />
+      {fps ? <span className="absolute left-4 top-3">{fps} fps</span> : null}
+      <span className="absolute right-4 top-3 flex items-center gap-2">
+        <span className="size-1.5 animate-pulse rounded-full bg-white" />
+        LIVE{cfg ? <span className="hidden sm:inline"> · BLK {cfg.head.toLocaleString("en-US")}</span> : null}
+      </span>
+      <span className="absolute bottom-3 left-4 hidden md:block">
+        [ {two(now.getDate())} / {two(now.getMonth() + 1)} / {two(now.getFullYear() % 100)} ]
+      </span>
+      <span className="absolute bottom-3 right-4 hidden md:block">
+        [ {two(now.getHours())} : {two(now.getMinutes())} : {two(now.getSeconds())} ]
+      </span>
+    </div>
+  );
+}
+
+/** A lime tag that rides the pointer: what the thing under it does. Fine pointers only. */
+function CursorPill({ label }: { label: string | null }) {
+  const x = useMotionValue(-200);
+  const y = useMotionValue(-200);
+  const sx = useSpring(x, { stiffness: 600, damping: 40 });
+  const sy = useSpring(y, { stiffness: 600, damping: 40 });
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      x.set(e.clientX);
+      y.set(e.clientY);
+    };
+    addEventListener("pointermove", move, { passive: true });
+    return () => removeEventListener("pointermove", move);
+  }, [x, y]);
+  return (
+    <motion.div style={{ x: sx, y: sy }} className="pointer-events-none fixed left-0 top-0 z-50 hidden pointer-fine:block">
+      <AnimatePresence>
+        {label && (
+          <motion.span
+            key={label}
+            initial={{ opacity: 0, scale: 0.6 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.6 }}
+            transition={{ duration: 0.18 }}
+            className="ml-5 mt-5 block origin-top-left whitespace-nowrap rounded-full border-2 border-[var(--sticker-shadow)] bg-lime px-3 py-1 text-[13px] font-semibold text-lime-ink"
+          >
+            {label}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+const hash = (x: number, y: number) => {
+  const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+  return s - Math.floor(s);
+};
+
+/**
+ * Pixel dissolve between two rooms, driven by scroll: blocks of the neighbouring room's colour
+ * break up as the seam travels up the screen. `bottom` mirrors it onto the end of a room.
+ */
+function PixelEdge({ from, bottom }: { from: string; bottom?: boolean }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const c = ref.current!;
+    const g = c.getContext("2d")!;
+    const CELL = 20;
+    let raf = 0;
+    const draw = () => {
+      raf = 0;
+      const r = c.getBoundingClientRect();
+      if (r.bottom < -40 || r.top > innerHeight + 40) return;
+      const w = Math.ceil(r.width / CELL);
+      const h = Math.ceil(r.height / CELL);
+      if (c.width !== w || c.height !== h) {
+        c.width = w;
+        c.height = h;
+      }
+      const p = bottom ? (innerHeight - r.bottom) / (innerHeight * 0.6) : (innerHeight - r.top) / (innerHeight * 0.7);
+      const cover = bottom ? Math.min(1, Math.max(0, p)) : 1 - Math.min(1, Math.max(0, p));
+      g.clearRect(0, 0, w, h);
+      g.fillStyle = from.startsWith("--") ? getComputedStyle(document.documentElement).getPropertyValue(from) : from;
+      for (let y = 0; y < h; y++) {
+        const row = bottom ? h - 1 - y : y;
+        for (let x = 0; x < w; x++) if ((1 - row / h) * 0.75 + hash(x, row) * 0.25 > 0.85 - cover * 0.6) g.fillRect(x, y, 1, 1);
+      }
+    };
+    const kick = () => {
+      raf ||= requestAnimationFrame(draw);
+    };
+    kick();
+    addEventListener("scroll", kick, { passive: true });
+    addEventListener("resize", kick);
+    const mo = new MutationObserver(kick);
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => {
+      cancelAnimationFrame(raf);
+      removeEventListener("scroll", kick);
+      removeEventListener("resize", kick);
+      mo.disconnect();
+    };
+  }, [from, bottom]);
+  return <canvas ref={ref} aria-hidden className={cx("pointer-events-none absolute inset-x-0 z-[5] h-48 w-full [image-rendering:pixelated]", bottom ? "bottom-0" : "top-0")} />;
+}
+
+/** CSS stand-in for a set, used where WebGL isn't available and for the small floating prints. */
+function CssTv({ t, className }: { t?: TokenSummary; className?: string }) {
+  return (
+    <div className={cx("rounded-[12%/15%] bg-gradient-to-b from-[#45483f] to-[#151612] p-[6%] shadow-[0_24px_48px_rgb(0_0_0/0.6)]", className)}>
+      <div className="relative aspect-[4/3] overflow-hidden rounded-[9%/12%] bg-black">
+        {t ? <Art t={t} className="opacity-90" /> : <div className="h-full w-full bg-[linear-gradient(90deg,#c0c0c0_14%,#c0c000_14%_28%,#00c0c0_28%_42%,#00c000_42%_57%,#c000c0_57%_71%,#c00000_71%_85%,#0000c0_85%)]" />}
+        <div className="crt-overlay absolute inset-0" />
+      </div>
+    </div>
+  );
+}
+
+function CssWall({ tokens }: { tokens: TokenSummary[] }) {
+  const spots = ["left-[3%] top-[12%] w-[22%] rotate-[-5deg]", "left-[8%] bottom-[10%] w-[18%] rotate-[4deg]", "right-[4%] top-[10%] w-[24%] rotate-[5deg]", "right-[9%] bottom-[12%] w-[18%] rotate-[-4deg]", "left-[27%] top-[46%] w-[12%] rotate-[3deg] opacity-60", "right-[28%] top-[44%] w-[12%] rotate-[-3deg] opacity-60"];
+  return (
+    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,#1a2422,#070908_70%)]">
+      {spots.map((s, i) => (
+        <CssTv key={s} t={tokens[i]} className={cx("absolute", s)} />
+      ))}
+    </div>
+  );
+}
+
+// ───────────── 1 · the wall ─────────────
+
+function Hero({ tokens, onHover, onPick }: { tokens: TokenSummary[]; onHover: (h: Hover) => void; onPick: (to: string) => void }) {
+  const ref = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
+  const push = useRef(0);
+  useMotionValueEvent(scrollYProgress, "change", (v) => (push.current = v));
+  const fade = useTransform(scrollYProgress, [0, 0.95], [1, 0.25]);
+  const lift = useTransform(scrollYProgress, [0, 1], [0, -140]);
+  const [failed, setFailed] = useState(false);
+  return (
+    <section ref={ref} className={cx(ROOM, "bg-[#0b0f0e]")}>
+      <motion.div style={{ opacity: fade }} className="absolute inset-0">
+        {failed ? (
+          <CssWall tokens={tokens} />
+        ) : (
+          <Suspense fallback={null}>
+            <CrtScene mode="wall" tokens={tokens} progress={push} onHover={onHover} onPick={onPick} onFail={() => setFailed(true)} />
+          </Suspense>
+        )}
+      </motion.div>
+      <div aria-hidden className="crt-overlay pointer-events-none absolute inset-0" />
+      <motion.div style={{ y: lift }} className="pointer-events-none relative z-10 flex h-full flex-col items-center justify-between px-4 pb-24 pt-[7vh] text-center md:pb-16">
+        <motion.h1
+          initial={{ opacity: 0, filter: "blur(14px)", scale: 1.04 }}
+          animate={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
+          transition={{ duration: 1.1, ease: EASE }}
+          className="text-glow font-display text-[68px] leading-[0.9] font-[800] uppercase text-lime sm:text-[96px] lg:text-[128px]"
+        >
+          Start ahead.
+          <br />
+          Stay paid.
+        </motion.h1>
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5, ease: EASE }} className="flex flex-col items-center gap-5">
+          <span aria-hidden className="text-[30px] font-thin leading-none text-ink-2">
+            +
+          </span>
+          <p className="max-w-md text-[15px] leading-6 text-ink-2 md:text-[16px]">
+            Every buy lands with bonus tokens on top. Every holder is paid ETH from the trading, and paid more the longer they hold.
+          </p>
+          <div className="pointer-events-auto flex flex-wrap justify-center gap-3">
+            <Link to="/arcade" className={btn}>
+              Enter the arcade
+            </Link>
+            <Link to="/launch" className={btnGhost}>
+              Launch a token
+            </Link>
+          </div>
+          <span className="num hidden text-[11px] text-ink-3 pointer-fine:block">Point at a screen to tune in</span>
+        </motion.div>
+      </motion.div>
+    </section>
+  );
+}
+
+// ───────────── 2 · the line that scrolls past ─────────────
+
+const PRINTS = [
+  "left-[14%] top-[52%]",
+  "left-[38%] top-[66%]",
+  "left-[61%] top-[50%]",
+  "left-[24%] top-[80%]",
+  "left-[80%] top-[70%]",
+  "left-[50%] top-[86%]",
+];
+
+function Print({ t, i, p }: { t: TokenSummary; i: number; p: MotionValue<number> }) {
+  const y = useTransform(p, [0, 1], [140 + i * 50, -220 - i * 40]);
+  const rotate = useTransform(p, [0, 1], [i % 2 ? -12 : 10, i % 2 ? 8 : -9]);
+  const rotateY = useTransform(p, [0, 1], [i % 2 ? 28 : -28, i % 2 ? -18 : 18]);
+  return (
+    <motion.div style={{ y, rotate, rotateY, transformPerspective: 600 }} className={cx("absolute w-[24vw] max-w-[140px]", PRINTS[i])}>
+      <Link to={`/token/${t.address}`} className="group block">
+        <div className="aspect-square overflow-hidden rounded-md border border-white/15 shadow-[0_18px_40px_rgb(0_0_0/0.6)] transition-transform duration-300 group-hover:scale-110">
+          <Art t={t} />
+        </div>
+      </Link>
+    </motion.div>
+  );
+}
+
+function Marquee({ tokens }: { tokens: TokenSummary[] }) {
+  const ref = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
+  const x = useTransform(scrollYProgress, [0, 1], ["3%", "-71%"]);
+  return (
+    <section ref={ref} className="stage-dark relative h-[240vh] bg-[#0b0f0e]">
+      <div className="sticky top-[100px] h-[calc(100svh-100px)] overflow-hidden">
+        <div aria-hidden className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-[#3d4e0b] via-[#18200a]/70 to-transparent" />
+        <motion.p style={{ x }} className="font-display relative mt-[5vh] w-max whitespace-nowrap text-[34vw] leading-[0.85] font-[800] text-ink/90 md:text-[24vw]">
+          Buy it, get more. Hold it, get paid.
+        </motion.p>
+        {tokens.slice(0, 6).map((t, i) => (
+          <Print key={t.address} t={t} i={i} p={scrollYProgress} />
+        ))}
+        <div aria-hidden className="crt-overlay pointer-events-none absolute inset-0" />
+      </div>
+    </section>
+  );
+}
+
+// ───────────── 3 · now playing ─────────────
+
+function NowPlaying({ tokens, onHover, onPick }: { tokens: TokenSummary[]; onHover: (h: Hover) => void; onPick: (to: string) => void }) {
+  const list = tokens.slice(0, 8);
+  const [i, setI] = useState(0);
+  const [failed, setFailed] = useState(false);
+  const step = (d: number) => setI((x) => (x + d + list.length) % list.length);
+  const t = list[i];
+  if (!t) return null;
+  const tags = [`+${t.bonusBps / 100}% on top`, or(t.holders, (n) => `${n} holders`, "first holder wins"), t.paid ? `${eth(t.paid)} paid out` : t.pot ? `${eth(t.pot)} in the pot` : "pot filling", `${usd(t.fdvUsd)} cap`];
+  const side = "pointer-events-auto absolute top-1/2 z-10 hidden h-10 -translate-y-1/2 items-center rounded-lg border px-4 text-[14px] transition-colors duration-150 md:inline-flex";
+  return (
+    <section
+      className={cx(ROOM, "min-h-[680px] bg-[#090b07]")}
+      onKeyDown={(e) => {
+        if (e.key === "ArrowLeft") step(-1);
+        if (e.key === "ArrowRight") step(1);
+      }}
+    >
+      {failed ? (
+        <div className="absolute inset-0 grid place-items-center bg-[linear-gradient(#3d4e0b,#090b07_45%)]">
+          <CssTv t={t} className="w-[min(70vw,460px)]" />
+        </div>
+      ) : (
+        <Suspense fallback={null}>
+          <CrtScene mode="feature" tokens={list} index={i} onStep={step} onPick={onPick} onHover={(h) => onHover(h && (h.to ? { label: `Play $${t.symbol}` } : h))} onFail={() => setFailed(true)} />
+        </Suspense>
+      )}
+      <PixelEdge from="#0b0f0e" />
+      <div aria-hidden className="crt-overlay pointer-events-none absolute inset-0" />
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/85 to-transparent" />
+      <button onClick={() => step(-1)} className={cx(side, "left-[7%] border-white/40 bg-black/40 text-ink backdrop-blur hover:bg-black/60")}>
+        Previous
+      </button>
+      <button onClick={() => step(1)} className={cx(side, "right-[7%] border-[var(--sticker-shadow)] bg-lime font-semibold text-lime-ink hover:brightness-110")}>
+        Next
+      </button>
+      <div className="pointer-events-none relative z-10 flex h-full flex-col items-center justify-between px-4 pb-20 pt-10 text-center md:pb-14">
+        <div>
+          <h2 className="font-display text-[60px] leading-none font-[800] text-ink md:text-[84px]">Now playing</h2>
+          <span className="num mt-3 block text-[13px] text-ink-2">
+            [ {two(i + 1)} / {two(list.length)} ]
+          </span>
+        </div>
+        <div className="flex flex-col items-center gap-4">
+          <AnimatePresence mode="wait">
+            <motion.div key={t.address} initial={{ opacity: 0, y: 10, filter: "blur(6px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(6px)" }} transition={{ duration: 0.3 }}>
+              <h3 className="font-display text-[44px] leading-none font-[800]">{t.name}</h3>
+              <div className="num mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[13px] text-ink-2">
+                {tags.map((x) => (
+                  <span key={x}>[ {x} ]</span>
+                ))}
+              </div>
+            </motion.div>
+          </AnimatePresence>
+          <div className="pointer-events-auto flex items-center gap-2">
+            <button onClick={() => step(-1)} aria-label="Previous token" className="grid size-11 place-items-center rounded-xl border border-white/35 bg-black/30 text-ink backdrop-blur md:hidden">
+              <ChevronLeft size={18} strokeWidth={1.5} />
+            </button>
+            <Link to={`/token/${t.address}`} className={btn}>
+              Play ${t.symbol}
+            </Link>
+            <Link to={`/token/${t.address}`} aria-label={`Open $${t.symbol}`} className={cx(btn, "px-3")}>
+              <ArrowRight size={18} strokeWidth={2} />
+            </Link>
+            <button onClick={() => step(1)} aria-label="Next token" className="grid size-11 place-items-center rounded-xl border border-white/35 bg-black/30 text-ink backdrop-blur md:hidden">
+              <ChevronRight size={18} strokeWidth={1.5} />
+            </button>
+          </div>
+        </div>
+      </div>
+      <PixelEdge from="#000000" bottom />
+    </section>
+  );
+}
+
+// ───────────── 4 · how the game pays, drag to explore ─────────────
+
+const ICON = {
+  plus: ["...XX...", "...XX...", "...XX...", "XXXXXXXX", "XXXXXXXX", "...XX...", "...XX...", "...XX..."],
+  gem: ["...XX...", "..XXXX..", ".XXXXXX.", "XXXXXXXX", "XXX..XXX", ".XXXXXX.", "..XXXX..", "...XX..."],
+  tiers: [".......X", "......XX", "......XX", "...XX.XX", "...XX.XX", "XX.XX.XX", "XX.XX.XX", "XX.XX.XX"],
+  lock: ["..XXXX..", ".X....X.", ".X....X.", "XXXXXXXX", "XXX..XXX", "XXX..XXX", "XXXXXXXX", "XXXXXXXX"],
+  down: ["...XX...", "...XX...", "...XX...", "...XX...", "XXXXXXXX", ".XXXXXX.", "..XXXX..", "...XX..."],
+  crown: ["X..XX..X", "XX.XX.XX", "XXXXXXXX", "XXXXXXXX", ".XXXXXX.", ".XXXXXX.", "........", "XXXXXXXX"],
+  refill: ["XXXXXXXX", "X......X", "X.XXXX.X", "X.XXXX.X", "X.XXXX.X", "X.XXXX.X", "X......X", "XXXXXXXX"],
+};
+
+const RULES = [
+  { icon: ICON.plus, big: `+${MIN_BONUS_BPS / 100}–${MAX_BONUS_BPS / 100}%`, name: "Bonus on every buy", tags: ["paid by OnTopHook", "same block as the swap", "rate set per launch"] },
+  { icon: ICON.gem, big: `${HOLDERS_BPS / 100}%`, name: "Holders paid in ETH", tags: ["of every pool fee", "pushed in rounds", "nothing to claim"] },
+  { icon: ICON.tiers, big: `${TIERS[TIERS.length - 1]!.mult}×`, name: "Hold longer, earn more", tags: TIERS.map((t) => `${t.label} ${t.mult}×`) },
+  { icon: ICON.lock, big: "93%", name: "Liquidity locked for good", tags: ["Uniswap v4 position", "owned by OnTopLaunchpad", "no remove function"] },
+  { icon: ICON.down, big: "+1%", name: "Buyers ahead, flippers pay", tags: ["fee derived from the bonus", "every buy nets at least 1% ahead", "round trips always lose"] },
+  { icon: ICON.refill, big: `${TREASURY_BPS / 100}%`, name: "A treasury that refills", tags: [`${TREASURY_BPS / 100}% of supply locked`, "sell fees top it up", "the excess is burned"] },
+  { icon: ICON.crown, big: `${CREATOR_BPS / 100}%`, name: "Creators earn every trade", tags: [`${CREATOR_BPS / 100}% of pool fees`, "claimable any time", "launch in one transaction"] },
+];
+
+function PixelIcon({ rows, className }: { rows: string[]; className?: string }) {
+  return (
+    <svg viewBox="0 0 8 8" className={className} shapeRendering="crispEdges" aria-hidden>
+      {rows.flatMap((r, y) => [...r].map((c, x) => (c === "X" ? <rect key={`${x}${y}`} x={x} y={y} width="1" height="1" fill="var(--lime)" /> : null)))}
+    </svg>
+  );
+}
+
+/** Signed distance from the centre on a loop of RULES.length cards, so the reel has no ends. */
+const wrap = (o: number) => {
+  const n = RULES.length;
+  return ((((o + n / 2) % n) + n) % n) - n / 2;
+};
+
+function RuleCard({ r, i, pos, gap, onPick }: { r: (typeof RULES)[number]; i: number; pos: MotionValue<number>; gap: number; onPick: () => void }) {
+  const x = useTransform(pos, (p) => wrap(i - p) * gap);
+  const rotateY = useTransform(pos, (p) => wrap(i - p) * -16);
+  const z = useTransform(pos, (p) => -Math.abs(wrap(i - p)) * 130);
+  // fades out before the seam, so a card never visibly jumps from one end to the other
+  const opacity = useTransform(pos, (p) => Math.max(0, 1 - Math.abs(wrap(i - p)) * 0.31));
+  return (
+    <motion.button type="button" tabIndex={-1} onClick={onPick} style={{ x, rotateY, z, opacity }} className="absolute left-[calc(50%-85px)] top-0 w-[170px] md:left-[calc(50%-115px)] md:w-[230px]">
+      <div className="flex aspect-[3/4] flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(120%_85%_at_50%_0%,#33440a,#0d0f0a_72%)] p-5 text-left shadow-[0_30px_60px_rgb(0_0_0/0.7)]">
+        <PixelIcon rows={r.icon} className="size-14 md:size-20" />
+        <span className="font-display whitespace-nowrap text-[40px] leading-none font-[800] text-lime md:text-[64px]">{r.big}</span>
+      </div>
+    </motion.button>
+  );
+}
+
+function HowItPays({ onHover }: { onHover: (h: Hover) => void }) {
+  const pos = useMotionValue(0);
+  const [active, setActive] = useState(0);
+  const [gap, setGap] = useState(250);
+  const drag = useRef<{ x: number; p: number; t: number; v: number; moved: number } | null>(null);
+  const moved = useRef(0);
+  useMotionValueEvent(pos, "change", (v) => setActive(((Math.round(v) % RULES.length) + RULES.length) % RULES.length));
+  useEffect(() => {
+    const q = matchMedia("(min-width: 768px)");
+    const f = () => setGap(q.matches ? 280 : 200);
+    f();
+    q.addEventListener("change", f);
+    return () => q.removeEventListener("change", f);
+  }, []);
+  const go = (to: number) => void animate(pos, to, { type: "spring", stiffness: 240, damping: 30 });
+  const onDown = (e: ReactPointerEvent) => {
+    pos.stop();
+    drag.current = { x: e.clientX, p: pos.get(), t: performance.now(), v: 0, moved: 0 };
+  };
+  const onMove = (e: ReactPointerEvent) => {
+    const d = drag.current;
+    if (!d) return;
+    const now = performance.now();
+    const next = d.p - (e.clientX - d.x) / gap;
+    d.v = ((next - pos.get()) / Math.max(1, now - d.t)) * 1000;
+    d.t = now;
+    d.moved = Math.max(d.moved, Math.abs(e.clientX - d.x));
+    // capture only once it is a drag, so a plain click still reaches the card under the pointer
+    if (d.moved > 5 && !e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.setPointerCapture(e.pointerId);
+    pos.set(next);
+  };
+  const onUp = () => {
+    const d = drag.current;
+    drag.current = null;
+    moved.current = d?.moved ?? 0;
+    if (d) go(Math.round(pos.get() + (d.moved > 5 ? d.v * 0.12 : 0)));
+  };
+  const r = RULES[active]!;
+  return (
+    <section className="stage-dark relative isolate overflow-hidden bg-black px-4 pb-24 pt-20">
+      <div className="text-center">
+        <h2 className="font-display text-[60px] leading-none font-[800] md:text-[84px]">How the game pays</h2>
+        <div className="num mt-3 flex items-center justify-center gap-3 text-[13px] text-ink-2">
+          <button onClick={() => go(Math.round(pos.get()) - 1)} aria-label="Previous rule" className="grid size-8 place-items-center rounded-lg hover:bg-white/10">
+            <ChevronLeft size={16} strokeWidth={1.5} />
+          </button>
+          [ {two(active + 1)} / {two(RULES.length)} ]
+          <button onClick={() => go(Math.round(pos.get()) + 1)} aria-label="Next rule" className="grid size-8 place-items-center rounded-lg hover:bg-white/10">
+            <ChevronRight size={16} strokeWidth={1.5} />
+          </button>
+        </div>
+      </div>
+      <div
+        onPointerDown={onDown}
+        onPointerMove={onMove}
+        onPointerUp={onUp}
+        onPointerCancel={onUp}
+        onPointerEnter={() => onHover({ label: "Drag to explore" })}
+        onPointerLeave={() => onHover(null)}
+        className="relative mx-auto mt-14 h-[240px] cursor-grab touch-pan-y select-none [perspective:1200px] [transform-style:preserve-3d] active:cursor-grabbing md:h-[320px]"
+      >
+        {RULES.map((x, i) => (
+          <RuleCard key={x.name} r={x} i={i} pos={pos} gap={gap} onPick={() => moved.current <= 5 && go(Math.round(pos.get() + wrap(i - pos.get())))} />
+        ))}
+        <div aria-hidden className="pointer-events-none absolute left-[calc(50%-97px)] top-[-14px] h-[254px] w-[194px] rounded-[22px] border border-white/60 md:left-[calc(50%-131px)] md:top-[-16px] md:h-[339px] md:w-[262px]" />
+      </div>
+      <AnimatePresence mode="wait">
+        <motion.div key={r.name} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22 }} className="mt-14 text-center">
+          <h3 className="font-display text-[40px] leading-none font-[800]">{r.name}</h3>
+          <div className="num mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[13px] text-ink-2">
+            {r.tags.map((x) => (
+              <span key={x}>[ {x} ]</span>
+            ))}
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    </section>
+  );
+}
+
+// ───────────── 5 · the pitch, lit word by word ─────────────
+
+// *starred* words light up lime instead of white
+const PITCH = "ONTOPPAD is a launchpad where every buy lands with *bonus *tokens *on *top and every holder is *paid *in *ETH from the trading. No staking, no claiming, no points. The contracts do it on every trade, and every number lives on-chain for anyone to check.";
+
+function Word({ w, i, n, p }: { w: string; i: number; n: number; p: MotionValue<number> }) {
+  const start = (i / n) * 0.8;
+  const opacity = useTransform(p, [start, start + 0.08], [0.2, 1]);
+  const hot = w.startsWith("*");
+  return <motion.span style={{ opacity }} className={hot ? "text-lime" : undefined}>{`${hot ? w.slice(1) : w} `}</motion.span>;
+}
+
+function Pitch() {
+  const ref = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
+  const blur = useTransform(scrollYProgress, [0, 0.4, 1], ["blur(6px)", "blur(1px)", "blur(3px)"]);
+  const words = useMemo(() => PITCH.split(" "), []);
+  return (
+    <section ref={ref} className="stage-dark relative h-[200vh] bg-black">
+      <div className="sticky top-[100px] flex h-[calc(100svh-100px)] items-center px-4 md:px-[8%]">
+        <motion.span aria-hidden style={{ filter: blur }} className="font-display absolute left-[4%] top-1/2 hidden -translate-y-1/2 text-[64px] font-[800] text-ink/45 lg:block">
+          The pitch
+        </motion.span>
+        <p className="mx-auto max-w-[780px] text-[26px] leading-[1.35] font-medium tracking-tight text-ink md:text-[36px] lg:ml-[34%] lg:max-w-[640px]">
+          {words.map((w, i) => (
+            <Word key={i} w={w} i={i} n={words.length} p={scrollYProgress} />
+          ))}
+        </p>
+      </div>
+    </section>
+  );
+}
+
+// ───────────── 6 · the receipts ─────────────
+
+const AMOUNTS = ["0.001", "0.005", "0.01"] as const;
+
+/** Live quote for the house token, read from Uniswap v4: the product in one card. */
+function QuoteCard({ token, ethUsd }: { token?: TokenSummary; ethUsd: number }) {
+  const [amountIn, setAmountIn] = useState<(typeof AMOUNTS)[number]>("0.001");
   const { data } = useQuery({
     queryKey: ["hero-quote", token?.address, amountIn],
     queryFn: () => quote(token!, "buy", parseEther(amountIn)),
@@ -26,53 +536,33 @@ function QuoteCard({ token, step, ethUsd }: { token?: TokenSummary; step: number
   });
   const base = data ? Number(formatUnits(data.out, 18)) : 0;
   const bonus = data ? Number(formatUnits(data.bonus, 18)) : 0;
+  const total = useTween(base + bonus);
   return (
-    <div className="w-full max-w-[380px] rounded-2xl border border-line-2 bg-card/95 p-5 shadow-[0_24px_48px_rgb(0_0_0/0.35)] backdrop-blur">
+    <div className="w-full rounded-2xl border border-line-2 bg-card p-6 shadow-[0_30px_60px_rgb(0_0_0/0.35)]">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          {token && <TokenArt src={token.image} address={token.address} symbol={token.symbol} size={28} />}
-          <span className="text-[14px] font-medium">Buy ${token?.symbol ?? "ONTOP"}</span>
+          {token && <TokenArt src={token.image} address={token.address} symbol={token.symbol} size={32} />}
+          <span className="text-[15px] font-medium">Buy ${token?.symbol ?? "ONTOP"}</span>
         </div>
-        <span className="num text-[12px] text-ink-3">Live quote</span>
+        <span className="num text-[12px] text-ink-3">[ live quote ]</span>
       </div>
-      <div className="mt-4 flex flex-col gap-2 num text-[13px]">
-        <div className="flex justify-between">
-          <span className="text-ink-3">You pay</span>
-          <span>{amountIn} ETH</span>
-        </div>
+      <Segmented value={amountIn} onChange={setAmountIn} options={AMOUNTS.map((a) => ({ value: a, label: `${a} ETH` }))} className="mt-5" />
+      <div className="num mt-5 flex flex-col gap-2 text-[13px]">
         <div className="flex justify-between">
           <span className="text-ink-3">Base from the pool</span>
           <span className="text-ink-2">{base > 0 ? amount(base) : "Quoting"}</span>
         </div>
         <div className="flex items-center justify-between">
-          <motion.span key={step} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}>
-            <Stamp bps={token?.bonusBps ?? 500} />
-          </motion.span>
+          <Stamp bps={token?.bonusBps ?? 500} />
           <span className="text-accent">{bonus > 0 ? `+${amount(bonus)}` : "Quoting"}</span>
         </div>
       </div>
-      <div className="mt-4 flex items-baseline justify-between border-t border-line pt-4">
-        <span className="text-[13px] text-ink">You get</span>
-        {base > 0 ? <Num value={base + bonus} format={amount} className="text-[24px] font-medium" /> : <span className="text-ink-3">Quoting</span>}
+      <div className="mt-5 flex items-baseline justify-between border-t border-line pt-5">
+        <span className="text-[14px]">You get</span>
+        {base > 0 ? <span className="font-display text-[48px] leading-none font-[800] text-ink">{amount(total)}</span> : <span className="text-ink-3">Quoting</span>}
       </div>
-      {token && base > 0 && <p className="mt-1 num text-[12px] text-ink-3">≈ {usd((base + bonus) * token.price * ethUsd)} · read from Uniswap v4 just now</p>}
+      {token && base > 0 && <p className="num mt-2 text-[12px] text-ink-3">≈ {usd((base + bonus) * token.price * ethUsd)} · read from Uniswap v4 just now</p>}
     </div>
-  );
-}
-
-function Pillar({ kicker, title, body, proof, children, className }: { kicker: string; title: string; body: string; proof: string; children: React.ReactNode; className?: string }) {
-  return (
-    <Card className={`flex flex-col gap-6 p-6 md:p-8 ${className ?? ""}`}>
-      <div className="flex flex-col gap-2">
-        <span className="num text-[12px] text-ink-3">{kicker}</span>
-        <h3 className="text-[26px] leading-tight font-semibold tracking-tight">{title}</h3>
-        <p className="max-w-md text-[15px] text-ink-2">{body}</p>
-      </div>
-      <div className="flex-1">{children}</div>
-      <p className="text-[13px] text-ink-3">
-        Proof: <span className="text-ink-2">{proof}</span>
-      </p>
-    </Card>
   );
 }
 
@@ -88,13 +578,111 @@ function WalletCheck() {
         if (ok) nav(`/rewards/${v.trim()}`);
       }}
     >
-      <input value={v} onChange={(e) => setV(e.target.value)} placeholder="0x wallet address" aria-label="Wallet address" className="num h-10 flex-1 rounded-[10px] border border-line-2 bg-deep px-3 text-[13px] placeholder:text-ink-3 focus:outline-none focus:border-[var(--accent)]" />
-      <Button type="submit" variant="secondary" disabled={!ok}>
-        Check wallet
-      </Button>
+      <input value={v} onChange={(e) => setV(e.target.value)} placeholder="Check any wallet, 0x…" aria-label="Wallet address" className="num h-11 flex-1 rounded-xl border border-line-2 bg-deep px-4 text-[13px] placeholder:text-ink-3 focus:border-[var(--accent)] focus:outline-none" />
+      <button type="submit" disabled={!ok} className={cx(btn, "justify-center disabled:opacity-50")}>
+        Look up
+      </button>
     </form>
   );
 }
+
+function BigStat({ label, value, format, empty }: { label: string; value: number; format: (v: number) => string; empty: string }) {
+  const v = useTween(value);
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="num text-[12px] text-ink-3">[ {label} ]</span>
+      {value > 0 ? <span className="font-display whitespace-nowrap text-[34px] leading-none font-[800] text-ink sm:text-[46px] md:text-[56px]">{format(v)}</span> : <span className="text-[18px] leading-7 text-ink-2">{empty}</span>}
+    </div>
+  );
+}
+
+function Receipts({ house, ethUsd }: { house?: TokenSummary; ethUsd: number }) {
+  const { data: s } = useStats();
+  return (
+    <section className="relative px-4 pb-24 pt-40 md:px-6">
+      <PixelEdge from="#000000" />
+      <div className="relative z-10 grid gap-12 lg:grid-cols-[1.2fr_1fr] lg:items-center">
+        <div>
+          <span className="num text-[13px] text-ink-3">[ the receipts ]</span>
+          <h2 className="font-display mt-3 text-[60px] leading-[0.9] font-[800] md:text-[88px]">
+            Every number,
+            <br />
+            on-chain.
+          </h2>
+          <div className="mt-10 grid grid-cols-2 gap-x-6 gap-y-8">
+            <BigStat label="tokens launched" value={s?.tokens ?? 0} format={(v) => Math.round(v).toString()} empty="First launch pending" />
+            <BigStat label="bonus paid on buys" value={s?.bonusUsd ?? 0} format={usd} empty="Waiting on the first buy" />
+            <BigStat label="paid to holders" value={s?.paid ?? 0} format={(v) => eth(v)} empty="First round filling" />
+            <BigStat label="trades" value={s?.trades ?? 0} format={(v) => Math.round(v).toLocaleString("en-US")} empty="Market opens with the first buy" />
+          </div>
+          {s && (
+            <p className="num mt-6 text-[12px] text-ink-3">
+              Indexed to block {s.indexed.toLocaleString("en-US")} · {s.head - s.indexed < 120 ? "live" : "catching up"} · last trade {s.lastTradeAt ? ago(s.lastTradeAt) : "pending"}
+            </p>
+          )}
+          <div className="mt-8 max-w-xl">
+            <WalletCheck />
+          </div>
+        </div>
+        <QuoteCard token={house} ethUsd={ethUsd} />
+      </div>
+    </section>
+  );
+}
+
+// ───────────── 7 · what a buy does ─────────────
+
+const FLOW = [
+  ["Your wallet", "sends ETH with a minimum out"],
+  ["OnTopRouter.buy", "opens a Uniswap v4 unlock, passes you as the buyer"],
+  ["PoolManager.swap", "fills against the locked launch liquidity"],
+  ["OnTopHook.afterSwap", "pays the bonus from the token treasury"],
+  ["Your wallet", "receives base + bonus in the same block"],
+];
+
+function PressBuy() {
+  return (
+    <section className="px-4 py-24 md:px-6">
+      <span className="num text-[13px] text-ink-3">[ one transaction, four contracts ]</span>
+      <h2 className="font-display mt-3 text-[56px] leading-[0.9] font-[800] md:text-[80px]">What happens when you press buy</h2>
+      <div className="mt-12 grid gap-4 lg:grid-cols-5">
+        {FLOW.map(([k, v], i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-60px" }}
+            transition={{ duration: 0.5, delay: i * 0.08, ease: EASE }}
+            className={cx("flex flex-col gap-3 rounded-2xl border p-5", i === 3 ? "border-[var(--sticker-shadow)] bg-lime text-lime-ink shadow-[5px_5px_0_var(--sticker-shadow)]" : "border-line bg-card")}
+          >
+            <span className="font-display text-[40px] leading-none font-[800]">{two(i + 1)}</span>
+            <span className="num text-[13px] font-medium">{k}</span>
+            <span className={cx("text-[13px]", i === 3 ? "opacity-80" : "text-ink-2")}>{v}</span>
+          </motion.div>
+        ))}
+      </div>
+      <div className="mt-4 grid gap-4 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        <div className="rounded-2xl border border-line bg-card p-5">
+          <span className="num text-[13px]">Then the pool fee splits</span>
+          <p className="mt-2 text-[13px] text-ink-2">Fees accrue to the position OnTopLaunchpad owns. Token-side fees refill the bonus treasury and the excess burns.</p>
+        </div>
+        {[
+          [`${HOLDERS_BPS / 100}%`, "Holders", "pushed in ETH rounds"],
+          [`${CREATOR_BPS / 100}%`, "Creator", "claimable any time"],
+          [`${PLATFORM_BPS / 100}%`, "Platform", "keeps the lights on"],
+        ].map(([p, k, s], i) => (
+          <div key={k} className={cx("flex flex-col gap-1 rounded-2xl border p-5", i === 0 ? "border-[var(--accent)]" : "border-line", "bg-card")}>
+            <span className={cx("font-display text-[52px] leading-none font-[800]", i === 0 && "text-accent")}>{p}</span>
+            <span className="text-[14px]">{k}</span>
+            <span className="text-[12px] text-ink-3">{s}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ───────────── 8 · answers ─────────────
 
 const FAQ = [
   {
@@ -119,224 +707,102 @@ const FAQ = [
   },
 ];
 
+// ───────────── 9 · the close ─────────────
+
+/** Display line where a few letters flicker like a tired tube. */
+function Flicker({ text, seed }: { text: string; seed: number }) {
+  return (
+    <>
+      {[...text].map((c, i) => (
+        <span key={i} className={hash(i, seed) > 0.86 && c !== " " ? "flicker" : undefined} style={{ animationDelay: `${(hash(seed, i) * 4).toFixed(2)}s` }}>
+          {c}
+        </span>
+      ))}
+    </>
+  );
+}
+
+function Close({ tokens, onHover, onPick }: { tokens: TokenSummary[]; onHover: (h: Hover) => void; onPick: (to: string) => void }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <section className={cx(ROOM, "bg-[#0a0e0e]")}>
+      {failed ? (
+        <div className="absolute right-[-8%] top-1/2 w-[58%] -translate-y-1/2 rotate-[-5deg] max-md:hidden">
+          <CssTv />
+        </div>
+      ) : (
+        <Suspense fallback={null}>
+          <CrtScene mode="cta" tokens={tokens} onHover={onHover} onPick={onPick} onFail={() => setFailed(true)} />
+        </Suspense>
+      )}
+      <PixelEdge from="--bg" />
+      <div aria-hidden className="crt-overlay pointer-events-none absolute inset-0" />
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 to-transparent md:hidden" />
+      <div className="pointer-events-none relative z-10 flex h-full flex-col justify-end px-4 pb-24 md:justify-center md:px-[6%] md:pb-0">
+        <h2 className="font-display text-[60px] leading-[0.9] font-[800] md:text-[104px]">
+          <Flicker text="Got a token" seed={3} />
+          <br />
+          <Flicker text="in mind?" seed={7} />
+        </h2>
+        <p className="mt-4 text-[20px] text-ink-2 md:text-[24px]">Launch it in one transaction.</p>
+        <div className="mt-6 h-px w-full max-w-md bg-white/20" />
+        <div className="pointer-events-auto mt-6 flex flex-wrap gap-3">
+          <Link to="/launch" className={btn}>
+            Launch a token
+          </Link>
+          <Link to="/rules" className={btnGhost}>
+            Read the rules
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ───────────── page ─────────────
+
 export default function Home() {
-  const { data: stats } = useStats();
+  const nav = useNavigate();
   const { data: tokens } = useTokens("hot");
   const { data: cfg } = useConfig();
-  const [step, setStep] = useState(0);
-  const house = tokens?.find((t) => t.symbol === "ONTOP") ?? tokens?.[0];
-  const ethUsd = cfg?.ethUsd ?? stats?.ethUsd ?? 0;
+  const [pill, setPill] = useState<string | null>(null);
+  const list = useMemo(() => tokens ?? [], [tokens]);
+  const house = list.find((t) => t.symbol === "ONTOP") ?? list[0];
+  const onHover = (h: Hover) => setPill(h?.label ?? null);
+  const onPick = (to: string) => {
+    setPill(null);
+    nav(to);
+  };
 
   return (
     <div>
-      {/* ── hero: split, text on the left, coin + live quote on the right */}
-      <section className="mx-auto grid items-center gap-8 px-4 pt-12 md:px-6 lg:min-h-[min(calc(100dvh-100px),880px)] lg:grid-cols-[1fr_1.05fr] lg:pt-0">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }} className="flex flex-col gap-6">
-          <span className="num text-[13px] text-ink-3">Token launchpad on Robinhood Chain</span>
-          <h1 className="text-[44px] leading-[1.02] font-extrabold tracking-[-0.03em] sm:text-[64px] lg:text-[80px]">
-            Start ahead.
-            <br />
-            <span className="relative inline-block">
-              Stay paid.
-              <svg className="absolute -right-10 -top-2 hidden sm:block" width="36" height="40" viewBox="0 0 36 40" aria-hidden>
-                <path d="M4 18 L30 2 L24 20 Z M8 30 L34 22 L26 36 Z" fill="var(--lime)" stroke="var(--sticker-shadow)" strokeWidth="2" strokeLinejoin="round" />
-              </svg>
-            </span>
-          </h1>
-          <p className="max-w-[34rem] text-[18px] leading-[1.6] text-ink-2">
-            Every buy lands with bonus tokens on top. Every holder is paid ETH from the trading, and paid more the longer they hold. Every number lives on-chain where you can check it.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <ButtonLink to="/arcade" variant="primary" size="lg">
-              Enter the arcade
-              <ArrowRight size={18} strokeWidth={1.5} />
-            </ButtonLink>
-            <ButtonLink to="/launch" variant="secondary" size="lg">
-              Launch a token
-            </ButtonLink>
-          </div>
-        </motion.div>
-        <div className="relative flex min-h-[440px] items-end justify-center sm:min-h-[520px] lg:min-h-[640px]">
-          <Suspense fallback={null}>
-            <CoinScene onFlip={() => setStep((s) => s + 1)} />
-          </Suspense>
-          <div className="pointer-events-none relative z-10 mb-4 flex w-full flex-col items-center gap-3">
-            <div className="pointer-events-auto w-full max-w-[380px]">
-              <QuoteCard token={house} step={step} ethUsd={ethUsd} />
-            </div>
-            <span className="num text-[12px] text-ink-3">Drag the coin to spin it, click it to change the amount</span>
-          </div>
-        </div>
-      </section>
+      <Hud />
+      <CursorPill label={pill} />
+      <Hero tokens={list} onHover={onHover} onPick={onPick} />
+      <Marquee tokens={list} />
+      <NowPlaying tokens={list} onHover={onHover} onPick={onPick} />
+      <HowItPays onHover={onHover} />
+      <Pitch />
+      <Receipts house={house} ethUsd={cfg?.ethUsd ?? 0} />
+      <PressBuy />
 
-      {/* ── scoreboard */}
-      <section className="mx-auto px-4 md:px-6">
-        <div className="grid grid-cols-2 gap-6 rounded-2xl border border-line bg-card p-6 md:grid-cols-4 md:p-8">
-          <Stat label="Tokens launched" value={stats?.tokens ?? 0} format={(v) => Math.round(v).toString()} empty="First launch pending" />
-          <Stat label="Bonus paid on buys" value={stats?.bonusUsd ?? 0} format={usd} sub={stats ? `${amount(stats.bonusTokens)} tokens over ${stats.buys} buys` : undefined} empty="Waiting on the first buy" accent />
-          <Stat label="Paid to holders" value={stats?.paid ?? 0} format={(v) => eth(v)} sub={stats?.paid ? `${stats.payments} payments to ${stats.paidWallets} wallets` : stats ? `${eth(stats.pot)} filling the next rounds` : undefined} empty="First round filling" />
-          <Stat label="Trades" value={stats?.trades ?? 0} format={(v) => Math.round(v).toLocaleString("en-US")} sub={stats ? `${usd(stats.volumeUsd)} volume` : undefined} empty="Market opens with the first buy" />
-        </div>
-        {stats && (
-          <p className="mt-3 num text-[12px] text-ink-3">
-            Indexed to block {stats.indexed.toLocaleString("en-US")} · {stats.head - stats.indexed < 120 ? "live" : "catching up"} · last trade {stats.lastTradeAt ? ago(stats.lastTradeAt) : "pending"}
-          </p>
-        )}
-      </section>
-
-      {/* ── pillars */}
-      <section className="mx-auto mt-24 px-4 md:px-6">
-        <div className="mb-8 flex flex-col gap-2">
-          <h2 className="text-[32px] leading-tight font-semibold tracking-tight md:text-[40px]">Three rules, enforced by code</h2>
-          <p className="max-w-xl text-[15px] text-ink-2">No staking, no points, no claim buttons. The contracts do it on every trade.</p>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-12">
-          <Pillar className="lg:col-span-7" kicker="01" title="Ahead from block one" body="You don't start from zero. You start with an edge. Every buy gets extra tokens from the launch treasury, on top of what the pool pays." proof="bonus shown in the quote before every buy">
-            <div className="grid gap-2 sm:grid-cols-3">
-              {(tokens ?? []).slice(0, 3).map((t) => {
-                return (
-                  <Link key={t.address} to={`/token/${t.address}`} className="flex flex-col gap-3 rounded-xl border border-line bg-deep p-4 hover:border-line-2 transition-colors duration-150">
-                    <div className="flex items-center gap-2">
-                      <TokenArt src={t.image} address={t.address} symbol={t.symbol} size={24} />
-                      <span className="num text-[13px]">${t.symbol}</span>
-                    </div>
-                    <Stamp bps={t.bonusBps} className="self-start" />
-                    <span className="num text-[12px] text-ink-3">{t.bonusBuys ? `${amount(t.bonusPaid)} paid over ${t.bonusBuys} buys` : `${(feeFor(t.bonusBps) / 1e4).toFixed(2)}% pool fee`}</span>
-                  </Link>
-                );
-              })}
-            </div>
-            <p className="mt-4 num text-[12px] text-ink-3">bonus = tokens bought × bonusBps ÷ 10,000, paid by OnTopHook.afterSwap, capped by the treasury left</p>
-          </Pillar>
-          <Pillar className="lg:col-span-5" kicker="02" title="Paid for patience" body="Not for the fastest. For the ones who stay. Your share of every payout grows with how long your tokens have sat in your wallet." proof="time-weighted payout tiers">
-            <div className="flex flex-col gap-2">
-              {TIERS.map((t, i) => (
-                <div key={t.key} className="flex items-center gap-4 rounded-xl border border-line bg-deep px-4 py-3">
-                  <span className="inline-flex gap-[3px]" aria-hidden>
-                    {TIERS.map((x, j) => (
-                      <span key={x.key} className={`h-4 w-2 rounded-[2px] ${j <= i ? "bg-lime" : "bg-raised"}`} />
-                    ))}
-                  </span>
-                  <span className="flex-1 text-[14px]">{t.label}</span>
-                  <span className="num text-[13px] text-ink-3">{i === 0 ? "day 0 to 3" : i === 1 ? "day 3 to 7" : "day 7 on"}</span>
-                  <span className="num w-12 text-right text-[18px] font-medium">{t.mult}×</span>
-                </div>
-              ))}
-              <p className="text-[12px] text-ink-3">Buying more never resets your clock. Selling only resets the tokens you sold.</p>
-            </div>
-          </Pillar>
-          <Pillar className="lg:col-span-12" kicker="03" title="Proof, not promises" body="Every bonus and payout is public and checkable. Look up any wallet and see exactly what it got, round by round, with the transaction for each." proof="public rewards dashboard and wallet lookup">
-            <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-              <div className="flex flex-col gap-3">
-                <WalletCheck />
-                <Link to="/rewards" className="inline-flex items-center gap-1 text-[13px] text-ink-2 hover:text-ink">
-                  Open the rewards dashboard <ArrowRight size={14} strokeWidth={1.5} />
-                </Link>
-              </div>
-              <div className="flex flex-col gap-2 num text-[12px] text-ink-3">
-                <span>Every round commits on-chain to: snapshot block · inputs hash · recipients · total</span>
-                <span>Weights = balance × tier multiplier, rebuilt from public Transfer logs</span>
-                <span>Payments that can't be delivered are parked in OnTopDistributor, never lost</span>
-              </div>
-            </div>
-          </Pillar>
-        </div>
-      </section>
-
-      {/* ── hot tokens */}
-      <section className="mx-auto mt-24 px-4 md:px-6">
-        <div className="mb-6 flex items-end justify-between gap-4">
-          <div className="flex flex-col gap-2">
-            <h2 className="text-[32px] leading-tight font-semibold tracking-tight">On the board now</h2>
-            <p className="text-[15px] text-ink-2">Ranked by 24h volume, straight from the indexer</p>
-          </div>
-          <Link to="/arcade" className="hidden sm:inline-flex items-center gap-1 text-[14px] text-ink-2 hover:text-ink">
-            All tokens <ArrowRight size={16} strokeWidth={1.5} />
-          </Link>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {(tokens ?? []).slice(0, 6).map((t, i) => (
-            <TokenCard key={t.address} t={t} rank={i + 1} />
-          ))}
-        </div>
-      </section>
-
-      {/* ── how a buy lands */}
-      <section className="mx-auto mt-24 px-4 md:px-6">
-        <h2 className="mb-2 text-[32px] leading-tight font-semibold tracking-tight">What happens when you press buy</h2>
-        <p className="mb-8 max-w-xl text-[15px] text-ink-2">One transaction, four contracts. The bonus and the trade settle together, so there is nothing to claim later.</p>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card className="p-6">
-            <span className="num text-[12px] text-ink-3">The buy</span>
-            <ol className="mt-4 flex flex-col">
-              {[
-                ["Your wallet", "sends ETH with a minimum out"],
-                ["OnTopRouter.buy", "opens a Uniswap v4 unlock, passes you as the buyer"],
-                ["PoolManager.swap", "fills against the locked launch liquidity"],
-                ["OnTopHook.afterSwap", "pays the bonus from the token treasury"],
-                ["Your wallet", "receives base + bonus in the same block"],
-              ].map(([k, v], i, a) => (
-                <li key={i} className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <span className={`grid size-7 place-items-center rounded-md num text-[12px] ${i === 3 ? "bg-lime text-lime-ink" : "bg-raised text-ink-2"}`}>{i + 1}</span>
-                    {i < a.length - 1 && <span className="w-px flex-1 bg-line-2 my-1" />}
-                  </div>
-                  <div className="pb-4">
-                    <p className="num text-[13px] text-ink">{k}</p>
-                    <p className="text-[13px] text-ink-2">{v}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </Card>
-          <Card className="p-6">
-            <span className="num text-[12px] text-ink-3">The fees</span>
-            <div className="mt-4 flex flex-col gap-4">
-              <div className="rounded-xl border border-line bg-deep p-4">
-                <p className="num text-[13px]">Pool LP fee, set per launch from its bonus</p>
-                <p className="mt-1 text-[13px] text-ink-2">Accrues to the position OnTopLaunchpad owns. Anyone can call collect.</p>
-              </div>
-              <ArrowDown size={16} strokeWidth={1.5} className="mx-auto text-ink-3" />
-              <div className="grid grid-cols-3 gap-2 text-center">
-                {[
-                  [`${HOLDERS_BPS / 100}%`, "Holders", "OnTopDistributor pot"],
-                  [`${CREATOR_BPS / 100}%`, "Creator", "claimable"],
-                  [`${PLATFORM_BPS / 100}%`, "Platform", "operations"],
-                ].map(([p, k, s], i) => (
-                  <div key={k} className={`rounded-xl border p-3 ${i === 0 ? "border-[var(--accent)]" : "border-line"} bg-deep`}>
-                    <p className={`num text-[20px] font-medium ${i === 0 ? "text-accent" : ""}`}>{p}</p>
-                    <p className="text-[13px]">{k}</p>
-                    <p className="text-[12px] text-ink-3">{s}</p>
-                  </div>
-                ))}
-              </div>
-              <p className="text-[13px] text-ink-2">Fees paid in the token on sells refill the bonus treasury back to its starting size. Anything beyond that is burned.</p>
-            </div>
-          </Card>
-        </div>
-      </section>
-
-      {/* ── contracts */}
-      <section className="mx-auto mt-24 px-4 md:px-6">
-        <div className="mb-6 flex flex-col gap-2">
-          <h2 className="text-[32px] leading-tight font-semibold tracking-tight">The contracts behind every number</h2>
-          <p className="max-w-xl text-[15px] text-ink-2">Verified source on the Robinhood Chain explorer. Read them, call them, or rebuild the numbers yourself.</p>
-        </div>
+      <section className="px-4 py-24 md:px-6">
+        <span className="num text-[13px] text-ink-3">[ verified source ]</span>
+        <h2 className="font-display mb-10 mt-3 text-[56px] leading-[0.9] font-[800] md:text-[80px]">The machines behind every number</h2>
         <ContractsTable />
       </section>
 
-      {/* ── faq */}
-      <section className="mx-auto mt-24 grid gap-8 px-4 md:px-6 lg:grid-cols-[1fr_1.4fr]">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-[32px] leading-tight font-semibold tracking-tight">Straight answers</h2>
-          <p className="text-[15px] text-ink-2">The questions every degen asks first</p>
+      <section className="grid gap-8 px-4 pb-40 pt-24 md:px-6 lg:grid-cols-[1fr_1.4fr]">
+        <div>
+          <span className="num text-[13px] text-ink-3">[ straight answers ]</span>
+          <h2 className="font-display mt-3 text-[52px] leading-[0.9] font-[800] md:text-[64px]">The questions every degen asks first</h2>
         </div>
         <div className="flex flex-col">
           {FAQ.map((f) => (
-            <details key={f.q} className="group border-b border-line py-4">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[16px] font-medium">
+            <details key={f.q} className="group border-b border-line py-5">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[17px] font-medium">
                 {f.q}
-                <span className="num text-ink-3 transition-transform duration-200 group-open:rotate-45">+</span>
+                <span className="num text-[20px] text-ink-3 transition-transform duration-200 group-open:rotate-45">+</span>
               </summary>
               <p className="mt-3 max-w-2xl text-[14px] leading-6 text-ink-2">{f.a}</p>
             </details>
@@ -344,39 +810,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── final call */}
-      <section className="mx-auto mt-24 px-4 md:px-6">
-        <div className="flex flex-col items-start gap-6 rounded-2xl border border-line bg-card p-8 md:flex-row md:items-center md:justify-between md:p-12">
-          <div className="flex items-center gap-6">
-            <img src="/brand/logo-256.webp" alt="" width={88} height={88} className="hidden rotate-[-4deg] rounded-xl sm:block" />
-            <div>
-              <h2 className="text-[32px] leading-tight font-semibold tracking-tight">Your move, player one</h2>
-              <p className="mt-1 text-[15px] text-ink-2">
-                {house ? (
-                  <>
-                    ${house.symbol} pays a <span className="num">{house.bonusBps / 100}%</span> head start right now.{" "}
-                    {house.lastTradeAt ? (
-                      <a href={txUrl(house.launchTx)} target="_blank" rel="noreferrer" className="underline decoration-line-2 underline-offset-4 hover:text-ink">
-                        See its launch
-                      </a>
-                    ) : null}
-                  </>
-                ) : (
-                  "Pick a token, take the head start, hold for the payouts."
-                )}
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <ButtonLink to="/arcade" variant="primary" size="lg">
-              Enter the arcade
-            </ButtonLink>
-            <ButtonLink to="/rules" variant="secondary" size="lg">
-              Read the rules
-            </ButtonLink>
-          </div>
-        </div>
-      </section>
+      <Close tokens={list} onHover={onHover} onPick={onPick} />
     </div>
   );
 }

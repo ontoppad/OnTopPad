@@ -9,6 +9,7 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
+    "@fontsource-variable/big-shoulders-inline": "5.3.0",
     "@fontsource-variable/bricolage-grotesque": "5.3.0",
     "@fontsource-variable/jetbrains-mono": "5.3.0",
     "@ontoppad/shared": "workspace:*",

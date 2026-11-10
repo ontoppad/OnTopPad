@@ -1,10 +1,13 @@
 @import "tailwindcss";
 @import "@fontsource-variable/bricolage-grotesque";
 @import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource-variable/big-shoulders-inline";
 
-/* Arcade-at-night ramp: near-black with a faint olive cast from the logo's lime spill. */
+/* Arcade-at-night ramp: near-black with a faint olive cast from the logo's lime spill.
+   .stage-dark keeps the landing page's screening rooms dark in the light theme too: screens need the lights off. */
 :root,
-:root[data-theme="dark"] {
+:root[data-theme="dark"],
+.stage-dark {
   color-scheme: dark;
   --bg: #0e0f0c;
   --bg-deep: #0a0b08;
@@ -64,6 +67,7 @@
   --color-down-ink: var(--down-ink);
   --font-sans: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+  --font-display: "Big Shoulders Inline Variable", "Bricolage Grotesque Variable", sans-serif;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -135,6 +139,36 @@ body {
   box-shadow: 0 3px 0 var(--sticker-shadow);
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.stage-dark {
+  color: var(--ink);
+}
+
+/* CRT glass over a whole section: scanlines and a tube vignette */
+.crt-overlay {
+  background:
+    repeating-linear-gradient(to bottom, rgb(0 0 0 / 0.16) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse 75% 70% at 50% 50%, transparent 55%, rgb(0 0 0 / 0.6) 100%);
+}
+
+/* phosphor bloom on display type */
+.text-glow {
+  text-shadow:
+    0 0 18px rgb(203 253 0 / 0.35),
+    0 0 2px rgb(203 253 0 / 0.6);
+}
+
+/* a few letters in a headline drop out like a tired tube */
+.flicker {
+  animation: flicker 5s steps(1) infinite;
+}
+@keyframes flicker {
+  0%, 88%, 100% { opacity: 1; }
+  89% { opacity: 0.25; }
+  91% { opacity: 0.9; }
+  93% { opacity: 0.35; }
+  95% { opacity: 1; }
 }
 
 .scrollbar-none {
