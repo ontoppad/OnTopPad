@@ -26,7 +26,31 @@ const TOKENS = [
   { file: "bolt.png", name: "Hodl Bot", symbol: "BOLT", bonus: 300, fdv: 0.04, description: "Programmed to never sell. Runs on time-weighted payouts." },
 ];
 
+// second wave so the arcade can be seen with a full board; art from the procedural sprite generator
+const MORE: { file: string; name: string; symbol: string; description: string }[] = [
+  ["newt", "Neon Newt", "NEWT", "Glows brighter every payout round. Small, quick, hard to shake off."],
+  ["byte", "Byte Bandit", "BYTE", "Steals one byte of every block and pays it back to holders."],
+  ["moth", "Moon Moth", "MOTH", "Flies toward the green candles, every single time."],
+  ["goblin", "Gas Goblin", "GOBLN", "Eats gas fees for breakfast. Robinhood Chain keeps them tiny."],
+  ["llama", "Laser Llama", "LAMA", "Spits lasers, not tokens. Holders keep theirs."],
+  ["turbo", "Turbo Toad", "TURBO", "Zero to pond in one block. Hold for the 2x tier."],
+  ["pug", "Pixel Pug", "PUG", "Small dog, big bag. Barks at paper hands."],
+  ["hash", "Hash Hound", "HASH", "Sniffs out every Transfer log and wags at the payouts."],
+  ["crab", "Combo Crab", "CRAB", "Moves sideways, pays forward. Combo multiplier is hold time."],
+  ["gecko", "Glitch Gecko", "GECKO", "Sticks to the chart through every dip."],
+  ["bunny", "Block Bunny", "BUNNY", "Hops a block at a time. Never skips a payout round."],
+  ["rex", "Retro Rex", "REX", "Extinct everywhere except the top of the board."],
+  ["chip", "Chad Chip", "CHIP", "Silicon jaw, diamond grip. Built for the legend tier."],
+  ["mantis", "Mint Mantis", "MANTIS", "Patient hunter. Waits seven days, strikes for 2x."],
+  ["dash", "Dash Duck", "DASH", "Quacks on every buy. Bonus lands before the splash."],
+  ["octo", "Orbit Octo", "OCTO", "Eight arms, eight bags, one payout schedule."],
+  ["volt", "Volt Viper", "VOLT", "Charges up on volume, discharges in ETH."],
+  ["cobra", "Coin Cobra", "COBRA", "Coils around the treasury. Bites flippers on the way out."],
+].map(([file, name, symbol, description]) => ({ file: `${file}.png`, name: name!, symbol: symbol!, description: description! }));
+
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
+// trade sizing; override when the throwaway wallets run low
+const { BUY_MIN = "0.00002", BUY_MAX = "0.00006", MIN_ETH = "0.00008" } = process.env;
 const sleep = (s: number) => new Promise((r) => setTimeout(r, s * 1000));
 
 async function listed(): Promise<Map<string, Address>> {
@@ -40,10 +64,10 @@ function deployerWallet() {
   return createWalletClient({ chain: net.chain, transport: http(), account: privateKeyToAccount(pk) });
 }
 
-async function launch() {
+async function launch(list: { file: string; name: string; symbol: string; description: string; bonus?: number; fdv?: number; x?: string; website?: string }[] = TOKENS, firstBuy = "0.0002") {
   const w = deployerWallet();
   const have = await listed();
-  for (const t of TOKENS) {
+  for (const t of list) {
     if (have.has(t.symbol)) continue;
     const form = new FormData();
     form.set("name", t.name);
@@ -58,15 +82,15 @@ async function launch() {
       address: d.launchpad as Address,
       abi: onTopLaunchpadAbi,
       functionName: "launch",
-      value: parseEther("0.0002"),
+      value: parseEther(firstBuy),
       args: [
         {
           name: t.name,
           symbol: t.symbol,
           metadataURI: uri,
           quote: "0x0000000000000000000000000000000000000000",
-          bonusBps: t.bonus,
-          startTick: startTickForFdv(t.fdv, false),
+          bonusBps: t.bonus ?? 300 + 50 * Math.floor(Math.random() * 13),
+          startTick: startTickForFdv(t.fdv ?? rand(0.015, 0.06), false),
           firstBuyMinOut: 0n,
           salt: `0x${Buffer.from(t.symbol).toString("hex").padEnd(64, "0")}`,
         },
@@ -102,14 +126,14 @@ async function trade(rounds: number, delay: number) {
       const held = await client.readContract({ address: token, abi: onTopTokenAbi, functionName: "balanceOf", args: [account.address] });
       const eth = await client.getBalance({ address: account.address });
       // holders mostly hold: sells are rarer and partial, so payouts have patient wallets to reward
-      if (held > 0n && (Math.random() < 0.3 || eth < parseEther("0.00008"))) {
+      if (held > 0n && (Math.random() < 0.3 || eth < parseEther(MIN_ETH))) {
         const amount = (held * BigInt(Math.floor(rand(20, 60)))) / 100n;
         await client.waitForTransactionReceipt({ hash: await w.writeContract({ address: token, abi: onTopTokenAbi, functionName: "approve", args: [d.router as Address, amount] }) });
         const hash = await w.writeContract({ address: d.router as Address, abi: onTopRouterAbi, functionName: "sell", args: [token, amount, 0n, account.address, deadline] });
         await client.waitForTransactionReceipt({ hash });
         console.log(`${i} sell ${account.address.slice(0, 8)} ${token.slice(0, 8)}`);
-      } else if (eth > parseEther("0.00008")) {
-        const amount = parseEther(rand(0.00002, 0.00006).toFixed(8));
+      } else if (eth > parseEther(MIN_ETH)) {
+        const amount = parseEther(rand(Number(BUY_MIN), Number(BUY_MAX)).toFixed(8));
         const hash = await w.writeContract({ address: d.router as Address, abi: onTopRouterAbi, functionName: "buy", value: amount, args: [token, amount, 0n, account.address, deadline] });
         await client.waitForTransactionReceipt({ hash });
         console.log(`${i} buy  ${account.address.slice(0, 8)} ${token.slice(0, 8)}`);
@@ -123,6 +147,7 @@ async function trade(rounds: number, delay: number) {
 
 const [cmd, a, b] = process.argv.slice(2);
 if (cmd === "launch") await launch();
+else if (cmd === "launch-more") await launch(MORE, process.env.FIRST_BUY ?? "0.00001");
 else if (cmd === "fund") await fund();
 else if (cmd === "trade") await trade(Number(a ?? 30), Number(b ?? 20));
 else console.log("usage: seed-testnet.ts launch|fund|trade [rounds] [delaySec]");

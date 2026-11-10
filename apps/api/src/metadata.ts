@@ -102,11 +102,11 @@ export async function resolveMetadata(token: string) {
 }
 
 const uploads = new Map<string, number[]>();
-/** shortcut: in-memory per-IP limit (10/hour); move to nginx limit_req if the API ever runs multi-process. */
+/** shortcut: in-memory per-IP hourly limit; move to the proxy if the API ever runs multi-process. */
 export function allowUpload(ip: string): boolean {
   const now = Date.now();
   const recent = (uploads.get(ip) ?? []).filter((t) => now - t < 3_600_000);
-  if (recent.length >= 10) return false;
+  if (recent.length >= config.uploadsPerHour) return false;
   recent.push(now);
   uploads.set(ip, recent);
   return true;

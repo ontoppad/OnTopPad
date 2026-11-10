@@ -142,6 +142,7 @@ function Spotlight({ tokens }: { tokens: TokenSummary[] }) {
 function Carousel({ tokens }: { tokens: TokenSummary[] }) {
   const track = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
     const el = track.current;
@@ -154,11 +155,27 @@ function Carousel({ tokens }: { tokens: TokenSummary[] }) {
     return () => el.removeEventListener("scroll", onScroll);
   }, []);
 
-  const go = (dir: number) => {
+  const go = (dir: number, step = 2) => {
     const el = track.current;
     const card = el?.firstElementChild as HTMLElement | null;
-    if (el && card) el.scrollBy({ left: dir * (card.offsetWidth + 16) * 2, behavior: "smooth" });
+    if (!el || !card) return;
+    const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 8;
+    const atStart = el.scrollLeft <= 8;
+    // wrap around at either end so the reel never dead-ends
+    if (dir > 0 && atEnd) el.scrollTo({ left: 0, behavior: "smooth" });
+    else if (dir < 0 && atStart) el.scrollTo({ left: el.scrollWidth, behavior: "smooth" });
+    else el.scrollBy({ left: dir * (card.offsetWidth + 16) * step, behavior: "smooth" });
   };
+
+  // autoplay one card at a time; pauses on hover, focus or touch, and stays still for reduced-motion users
+  useEffect(() => {
+    if (paused || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = setInterval(() => {
+      const el = track.current;
+      if (el && el.scrollWidth > el.clientWidth + 8 && !document.hidden) go(1, 1);
+    }, 3500);
+    return () => clearInterval(id);
+  }, [paused]);
 
   return (
     <section id="hot" className="scroll-mt-28 bg-deep py-16">
@@ -175,7 +192,14 @@ function Carousel({ tokens }: { tokens: TokenSummary[] }) {
           ))}
         </div>
       </div>
-      <div ref={track} className="scrollbar-none mt-8 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-4 px-4 pb-2 md:scroll-px-6 md:px-6">
+      <div
+        ref={track}
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onFocus={() => setPaused(true)}
+        onBlur={() => setPaused(false)}
+        onTouchStart={() => setPaused(true)}
+        className="scrollbar-none mt-8 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-4 px-4 pb-2 md:scroll-px-6 md:px-6">
         {tokens.map((t, i) => (
           <Link
             key={t.address}
@@ -338,7 +362,7 @@ export default function Arcade() {
     <div>
       <Hero top={tokens[0]} />
       <Spotlight tokens={tokens} />
-      {tokens.length > 3 && <Carousel tokens={tokens} />}
+      {tokens.length > 3 && <Carousel tokens={tokens.slice(0, 12)} />}
       <Board tokens={tokens} sort={sort} setSort={setSort} />
       <Modes tokens={tokens} pick={pick} />
       <section className="flex flex-col items-center gap-4 px-4 py-16 text-center">

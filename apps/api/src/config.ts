@@ -12,6 +12,7 @@ export const config = {
   privateKey: env.PRIVATE_KEY as `0x${string}` | undefined,
   keeperIntervalSec: Number(env.KEEPER_INTERVAL_SEC ?? 900),
   minHoldUsd: Number(env.MIN_HOLD_USD ?? 1),
+  uploadsPerHour: Number(env.UPLOADS_PER_HOUR ?? 10),
   pollMs: 2_000,
   chunk: 20_000n,
 };
