@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import type { TokenSummary } from "../lib/api.ts";
 import { eth, or, pct, usd } from "../lib/format.ts";
-import { artSrc, cx, Skeleton, SkeletonLine, Stamp, TokenArt } from "./ui.tsx";
+import { artSrc, cx, Logo, Skeleton, SkeletonLine, Stamp, TokenArt } from "./ui.tsx";
 
 /** Change since launch when the token is younger than a day, otherwise 24h. */
 function change(t: TokenSummary) {
@@ -23,6 +23,7 @@ export function ChangeText({ t }: { t: TokenSummary }) {
 /** Pixel art blown up edge to edge; it stays crisp because the browser scales it nearest-neighbour. */
 export function Art({ t, className }: { t: { image: string | null; address: string; symbol: string }; className?: string }) {
   const src = artSrc(t.image);
+  if (t.symbol === "ONTOP") return <Logo className={cx("!h-full !w-full", className)} face="object-cover" />;
   return src ? (
     <img src={src} alt="" loading="lazy" className={cx("h-full w-full object-cover [image-rendering:pixelated]", className)} />
   ) : (

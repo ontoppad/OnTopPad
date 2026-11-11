@@ -302,7 +302,11 @@ function Modes({ tokens, pick }: { tokens: TokenSummary[]; pick: (s: Sort) => vo
               onClick={() => pick(m.sort)}
               className="group relative isolate flex aspect-[16/10] flex-col justify-end overflow-hidden rounded-xl border border-line p-4 text-left transition-colors duration-150 hover:border-line-2"
             >
-              {src && <img src={src} alt="" aria-hidden className="absolute inset-0 -z-20 h-full w-full object-cover opacity-80 transition-transform duration-500 ease-out [image-rendering:pixelated] group-hover:scale-105" />}
+              {lead?.symbol === "ONTOP" ? (
+                <Logo className="absolute inset-0 -z-20 !h-full !w-full opacity-80" face="object-cover" />
+              ) : (
+                src && <img src={src} alt="" aria-hidden className="absolute inset-0 -z-20 h-full w-full object-cover opacity-80 transition-transform duration-500 ease-out [image-rendering:pixelated] group-hover:scale-105" />
+              )}
               <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/85 via-black/45 to-black/10" />
               <span className="text-[15px] font-semibold text-white">{m.title}</span>
               <span className="text-[12px] text-white/75">{lead ? `${m.line} · $${lead.symbol} leads` : m.line}</span>

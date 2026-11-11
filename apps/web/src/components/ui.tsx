@@ -107,6 +107,8 @@ export function TokenArt({ src, address, symbol, size = 48, className }: { src?:
   const [broken, setBroken] = useState(false);
   const r = Math.max(6, Math.round(size / 5));
   src = artSrc(src);
+  // $ONTOP wears the OnTopPad logo, so it flips like the logo everywhere it shows up
+  if (symbol === "ONTOP") return <Logo size={size} radius={r} alt="$ONTOP" className={className} face={cx("object-cover bg-raised", className)} />;
   if (src && !broken) {
     return (
       <img
@@ -254,15 +256,22 @@ export function Reveal({ children, className, delay = 0 }: { children: ReactNode
   );
 }
 
-/** The OnTopPad sticker. Hovered, it flips over to a random meme coin; three quick clicks make it rain coins. */
-export function Logo({ size, className, face }: { size: number; className?: string; face?: string }) {
-  const [coin, setCoin] = useState(COINS[0]!);
+const nextCoin = (c?: string) => {
+  const pool = COINS.filter((x) => x !== c);
+  return pool[Math.floor(Math.random() * pool.length)]!;
+};
+
+/** The OnTopPad sticker, and $ONTOP's art. Hovered, it flips over to a random meme coin; three quick clicks make it rain coins.
+ *  Without a size it fills whatever box className gives it. */
+export function Logo({ size, className, face, radius, alt = "" }: { size?: number; className?: string; face?: string; radius?: number; alt?: string }) {
+  const [coin, setCoin] = useState(() => nextCoin());
   const clicks = useRef<number[]>([]);
+  // every coin is in cache before the first hover, so the back face never shows up blank or late
+  useEffect(() => COINS.forEach((c) => void (new Image().src = coinSrc(c))), []);
   return (
     <span
       className={cx("logo-flip", className)}
-      style={{ width: size, height: size }}
-      onPointerEnter={() => setCoin((c) => COINS.filter((x) => x !== c)[Math.floor(Math.random() * (COINS.length - 1))]!)}
+      style={size ? { width: size, height: size } : undefined}
       onClick={() => {
         const now = Date.now();
         clicks.current = [...clicks.current.filter((t) => now - t < 900), now];
@@ -272,8 +281,9 @@ export function Logo({ size, className, face }: { size: number; className?: stri
         }
       }}
     >
-      <span>
-        <img src="/brand/logo-256.webp" alt="" width={size} height={size} className={face ?? "rounded-lg"} />
+      {/* the next coin is dealt only once the logo faces front again, so a swap never happens in view */}
+      <span onTransitionEnd={(e) => e.target === e.currentTarget && getComputedStyle(e.currentTarget).transform === "none" && setCoin(nextCoin)}>
+        <img src={size && size <= 128 ? "/brand/logo-256.webp" : "/brand/logo-512.webp"} alt={alt} width={size} height={size} className={face ?? "rounded-lg"} style={radius === undefined ? undefined : { borderRadius: radius }} />
         <img src={coinSrc(coin)} alt="" width={size} height={size} />
       </span>
     </span>
