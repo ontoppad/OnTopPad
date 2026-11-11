@@ -21,7 +21,7 @@ const two = (n: number) => String(n).padStart(2, "0");
 const btn = "btn-press inline-flex h-11 items-center gap-2 rounded-xl border-2 border-[var(--sticker-shadow)] bg-lime px-5 text-[14px] font-semibold text-lime-ink";
 const btnGhost = "inline-flex h-11 items-center gap-2 rounded-xl border border-white/35 bg-black/30 px-5 text-[14px] text-ink backdrop-blur transition-colors duration-150 hover:border-white/70 hover:bg-black/50";
 // the landing's screening rooms; the header plus ticker above them is 100px
-const ROOM = "stage-dark relative isolate h-[calc(100svh-100px)] min-h-[600px] overflow-hidden";
+const ROOM = "stage-dark relative isolate h-[calc(100svh-92px)] min-h-[600px] overflow-hidden";
 
 // ───────────── chrome: camera HUD and cursor label ─────────────
 
@@ -42,7 +42,7 @@ function Hud({ ready }: { ready: boolean }) {
   }, [ready]);
   const corner = "absolute size-5 border-white/70";
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-x-3 bottom-4 top-[110px] z-30 font-mono text-[11px] text-white mix-blend-difference md:inset-x-4 md:text-[12px]">
+    <div aria-hidden className="pointer-events-none fixed inset-x-3 bottom-4 top-[102px] z-30 font-mono text-[11px] text-white mix-blend-difference md:inset-x-4 md:text-[12px]">
       <span className={cx(corner, "left-0 top-0 rounded-tl-lg border-l border-t")} />
       <span className={cx(corner, "right-0 top-0 rounded-tr-lg border-r border-t")} />
       {/* on a phone the bottom of every room is busy with buttons; the frame keeps only its top */}
@@ -335,7 +335,7 @@ function Marquee({ tokens }: { tokens: TokenSummary[] }) {
     <section ref={ref} data-ch="Get more" className="stage-dark relative z-10 h-[240vh] bg-[#0b0f0e]">
       {/* a soft lip instead of a hard edge where this room rides over the hero */}
       <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-40 h-40 bg-gradient-to-b from-transparent to-[#0b0f0e]" />
-      <div className="sticky top-[100px] h-[calc(100svh-100px)] overflow-hidden">
+      <div className="sticky top-[92px] h-[calc(100svh-92px)] overflow-hidden">
         <motion.div aria-hidden style={{ opacity: glow }} className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-[#3d4e0b] via-[#18200a]/70 to-transparent [mask-image:linear-gradient(to_bottom,transparent,black_30%)]" />
         <motion.p style={{ x }} className="font-title relative mt-[6vh] w-max whitespace-nowrap text-[22vw] leading-[0.95] text-ink/90 md:text-[15vw]">
           Buy it, get more. Hold it, get paid.
@@ -596,7 +596,7 @@ function Pitch() {
   const words = useMemo(() => PITCH.split(" "), []);
   return (
     <section ref={ref} data-ch="The pitch" className="stage-dark relative h-[200vh] bg-black">
-      <div className="sticky top-[100px] flex h-[calc(100svh-100px)] items-center px-4 md:px-[8%]">
+      <div className="sticky top-[92px] flex h-[calc(100svh-92px)] items-center px-4 md:px-[8%]">
         <motion.span aria-hidden style={{ filter: blur }} className="font-title absolute left-[4%] top-1/2 hidden -translate-y-1/2 text-[44px] text-ink/45 lg:block">
           The pitch
         </motion.span>
