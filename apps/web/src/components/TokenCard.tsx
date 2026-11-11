@@ -25,7 +25,7 @@ export function Art({ t, className }: { t: { image: string | null; address: stri
   const src = artSrc(t.image);
   if (t.symbol === "ONTOP") return <Logo className={cx("!h-full !w-full", className)} face="object-cover" />;
   return src ? (
-    <img src={src} alt="" loading="lazy" className={cx("h-full w-full object-cover [image-rendering:pixelated]", className)} />
+    <img src={src} alt="" loading="lazy" decoding="async" className={cx("h-full w-full object-cover [image-rendering:pixelated]", className)} />
   ) : (
     <TokenArt address={t.address} symbol={t.symbol} size={512} className={cx("!h-full !w-full !rounded-none", className)} />
   );

@@ -74,7 +74,14 @@ function WalletPicker() {
     if (!picker) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && closePicker();
     addEventListener("keydown", onKey);
-    return () => removeEventListener("keydown", onKey);
+    // the overlay is data-lenis-prevent, so without this a wheel over it scrolls the page underneath natively
+    const root = document.documentElement;
+    const overflow = root.style.overflow;
+    root.style.overflow = "hidden";
+    return () => {
+      removeEventListener("keydown", onKey);
+      root.style.overflow = overflow;
+    };
   }, [picker, closePicker]);
   return (
     <AnimatePresence>

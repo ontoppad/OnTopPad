@@ -117,6 +117,7 @@ export function TokenArt({ src, address, symbol, size = 48, className }: { src?:
         width={size}
         height={size}
         loading="lazy"
+        decoding="async"
         onError={() => setBroken(true)}
         className={cx("shrink-0 object-cover [image-rendering:pixelated] bg-raised", className)}
         style={{ width: size, height: size, borderRadius: r }}
@@ -310,7 +311,7 @@ export function PageHero({ art, badge, kicker, title, sub, children }: { art?: s
   const src = art?.startsWith("blob:") ? art : artSrc(art ?? tokens?.[0]?.image);
   return (
     <section className="relative isolate overflow-hidden border-b border-line">
-      {src && <motion.img key={src} src={src} alt="" aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 0.6 }} transition={{ duration: 0.8 }} className="absolute inset-0 -z-20 h-full w-full scale-125 object-cover blur-2xl [image-rendering:pixelated]" />}
+      {src && <motion.img key={src} src={src} alt="" aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 0.6 }} transition={{ duration: 0.8 }} className="absolute inset-0 -z-20 h-full w-full scale-125 object-cover blur-2xl will-change-transform [image-rendering:pixelated]" />}
       <div className="absolute inset-0 -z-10 bg-bg/70" />
       <div className="absolute inset-x-0 bottom-0 -z-10 h-24 bg-gradient-to-b from-transparent to-bg" />
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }} className="flex min-h-[300px] flex-col items-center justify-center gap-5 px-4 py-14 text-center md:min-h-[360px]">

@@ -235,7 +235,7 @@ export default function Token() {
   return (
     <div>
       <section className="relative isolate overflow-hidden border-b border-line">
-        {src && <motion.img key={src} src={src} alt="" aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 0.6 }} transition={{ duration: 0.8 }} className="absolute inset-0 -z-20 h-full w-full scale-125 object-cover blur-2xl [image-rendering:pixelated]" />}
+        {src && <motion.img key={src} src={src} alt="" aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 0.6 }} transition={{ duration: 0.8 }} className="absolute inset-0 -z-20 h-full w-full scale-125 object-cover blur-2xl will-change-transform [image-rendering:pixelated]" />}
         <div className="absolute inset-0 -z-10 bg-bg/70" />
         <div className="absolute inset-x-0 bottom-0 -z-10 h-24 bg-gradient-to-b from-transparent to-bg" />
         <div className="px-4 pb-10 pt-6 md:px-6 md:pt-8">

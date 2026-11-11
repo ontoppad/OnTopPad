@@ -110,6 +110,9 @@ function PixelEdge({ from, bottom }: { from: string; bottom?: boolean }) {
     const g = c.getContext("2d")!;
     const CELL = 20;
     let raf = 0;
+    // getComputedStyle on every scroll frame forces a style recalc; the colour only changes with the theme
+    const fill = () => (from.startsWith("--") ? getComputedStyle(document.documentElement).getPropertyValue(from) : from);
+    let color = fill();
     const draw = () => {
       raf = 0;
       const r = c.getBoundingClientRect();
@@ -123,7 +126,7 @@ function PixelEdge({ from, bottom }: { from: string; bottom?: boolean }) {
       const p = bottom ? (innerHeight - r.bottom) / (innerHeight * 0.6) : (innerHeight - r.top) / (innerHeight * 0.7);
       const cover = bottom ? Math.min(1, Math.max(0, p)) : 1 - Math.min(1, Math.max(0, p));
       g.clearRect(0, 0, w, h);
-      g.fillStyle = from.startsWith("--") ? getComputedStyle(document.documentElement).getPropertyValue(from) : from;
+      g.fillStyle = color;
       for (let y = 0; y < h; y++) {
         const row = bottom ? h - 1 - y : y;
         for (let x = 0; x < w; x++) if ((1 - row / h) * 0.75 + hash(x, row) * 0.25 > 0.85 - cover * 0.6) g.fillRect(x, y, 1, 1);
@@ -135,7 +138,10 @@ function PixelEdge({ from, bottom }: { from: string; bottom?: boolean }) {
     kick();
     addEventListener("scroll", kick, { passive: true });
     addEventListener("resize", kick);
-    const mo = new MutationObserver(kick);
+    const mo = new MutationObserver(() => {
+      color = fill();
+      kick();
+    });
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     return () => {
       cancelAnimationFrame(raf);

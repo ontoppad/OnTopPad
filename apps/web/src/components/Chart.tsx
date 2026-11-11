@@ -45,7 +45,9 @@ function baseChart(el: HTMLElement, fmt: (v: number) => string) {
     timeScale: { borderVisible: false, timeVisible: true, secondsVisible: false, rightOffset: 4 },
     crosshair: { mode: CrosshairMode.Normal, vertLine: { color: t.text, labelBackgroundColor: t.text }, horzLine: { color: t.text, labelBackgroundColor: t.text } },
     localization: { priceFormatter: fmt },
-    handleScale: { axisPressedMouseMove: true },
+    // wheel and vertical swipes belong to the page, or scrolling stalls whenever the cursor crosses the chart; drag and pinch still pan and zoom
+    handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+    handleScale: { axisPressedMouseMove: true, mouseWheel: false, pinch: true },
   });
 }
 

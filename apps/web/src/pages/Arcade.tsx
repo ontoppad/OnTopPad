@@ -33,7 +33,7 @@ function Hero({ top }: { top?: TokenSummary }) {
   const src = artSrc(top?.image);
   return (
     <section className="relative isolate overflow-hidden border-b border-line">
-      {src && <img src={src} alt="" aria-hidden className="absolute inset-0 -z-20 h-full w-full scale-125 object-cover opacity-60 blur-2xl [image-rendering:pixelated]" />}
+      {src && <img src={src} alt="" aria-hidden className="absolute inset-0 -z-20 h-full w-full scale-125 object-cover opacity-60 blur-2xl will-change-transform [image-rendering:pixelated]" />}
       <div className="absolute inset-0 -z-10 bg-bg/70" />
       <div className="absolute inset-x-0 bottom-0 -z-10 h-24 bg-gradient-to-b from-transparent to-bg" />
       <div className="flex min-h-[380px] flex-col items-center justify-center gap-5 px-4 py-16 text-center md:min-h-[440px]">
