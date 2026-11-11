@@ -335,6 +335,12 @@ export function Layout() {
           </nav>
           <div className="ml-auto flex items-center gap-2">
             <SearchBox />
+            {/* phones keep the X link in the footer: the header has no room left there */}
+            <a href="https://x.com/OnTopPad" target="_blank" rel="noreferrer" aria-label="OnTopPad on X" className="hidden sm:grid size-8 place-items-center rounded-lg text-ink-2 hover:text-ink hover:bg-raised transition-colors duration-150">
+              <svg viewBox="0 0 24 24" width={16} height={16} fill="currentColor" aria-hidden>
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+            </a>
             <NetworkStatus />
             <button onClick={toggle} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`} className="grid size-8 place-items-center rounded-lg text-ink-2 hover:text-ink hover:bg-raised transition-colors duration-150">
               {theme === "dark" ? <Sun size={18} strokeWidth={1.5} /> : <Moon size={18} strokeWidth={1.5} />}
