@@ -46,6 +46,14 @@ export const networks = {
     quotes: [ETH],
     appUrl: "https://testnet.ontoppad.com",
   },
+  mainnet: {
+    name: "mainnet" as const,
+    label: "Robinhood Chain",
+    chain: robinhoodMainnet,
+    deployment: deployments.mainnet,
+    quotes: [ETH],
+    appUrl: "https://ontoppad.com",
+  },
 } satisfies Record<string, unknown>;
 
 export type Network = (typeof networks)[keyof typeof networks];

@@ -13,6 +13,7 @@ A token launchpad on Robinhood Chain where every buyer starts a step ahead, and 
 | **Paid for patience** | Not for the fastest. For the ones who stay. | Time-weighted payout tiers |
 | **Proof, not promises** | Every bonus and payout is public and checkable. | Public rewards dashboard + wallet lookup |
 
+- Mainnet: https://ontoppad.com
 - Testnet: https://testnet.ontoppad.com
 - X: https://x.com/OnTopPad
 
@@ -38,13 +39,13 @@ LP fees ──collect──▶ OnTopLaunchpad ──75%──▶ OnTopDistributo
 
 ## Contracts
 
-| Contract | Robinhood Chain Testnet (46630) |
-| --- | --- |
-| OnTopLaunchpad | [`0x77426e21dD29D50ae61D4FB410d17B9389AF982f`](https://explorer.testnet.chain.robinhood.com/address/0x77426e21dD29D50ae61D4FB410d17B9389AF982f) |
-| OnTopHook | [`0xFedFbC1cB4668D9685Dd46815793855e29Fa2840`](https://explorer.testnet.chain.robinhood.com/address/0xFedFbC1cB4668D9685Dd46815793855e29Fa2840) |
-| OnTopRouter | [`0x021eC4faf62f071924f1c85d3E9D47448a75CF89`](https://explorer.testnet.chain.robinhood.com/address/0x021eC4faf62f071924f1c85d3E9D47448a75CF89) |
-| OnTopDistributor | [`0x7d8b2c229c36884a8ac3f1BE469E06a3395035C5`](https://explorer.testnet.chain.robinhood.com/address/0x7d8b2c229c36884a8ac3f1BE469E06a3395035C5) |
-| Uniswap v4 PoolManager | `0x8366a39CC670B4001A1121B8F6A443A643e40951` |
+| Contract | Robinhood Chain (4663) | Robinhood Chain Testnet (46630) |
+| --- | --- | --- |
+| OnTopLaunchpad | [`0xaDDA666a53c0190B3FE4fF5818B6eDadeB3Ae946`](https://robinhoodchain.blockscout.com/address/0xaDDA666a53c0190B3FE4fF5818B6eDadeB3Ae946) | [`0x77426e21dD29D50ae61D4FB410d17B9389AF982f`](https://explorer.testnet.chain.robinhood.com/address/0x77426e21dD29D50ae61D4FB410d17B9389AF982f) |
+| OnTopHook | [`0xec68d0eBA80A3aFB4Ccb3388a7808c20F886A840`](https://robinhoodchain.blockscout.com/address/0xec68d0eBA80A3aFB4Ccb3388a7808c20F886A840) | [`0xFedFbC1cB4668D9685Dd46815793855e29Fa2840`](https://explorer.testnet.chain.robinhood.com/address/0xFedFbC1cB4668D9685Dd46815793855e29Fa2840) |
+| OnTopRouter | [`0x36e7D5b03a86F228601840EE05Cc86eCAE6e6266`](https://robinhoodchain.blockscout.com/address/0x36e7D5b03a86F228601840EE05Cc86eCAE6e6266) | [`0x021eC4faf62f071924f1c85d3E9D47448a75CF89`](https://explorer.testnet.chain.robinhood.com/address/0x021eC4faf62f071924f1c85d3E9D47448a75CF89) |
+| OnTopDistributor | [`0x1d8c1b17a222a3f912dB2b80d0dD3749a4F45e15`](https://robinhoodchain.blockscout.com/address/0x1d8c1b17a222a3f912dB2b80d0dD3749a4F45e15) | [`0x7d8b2c229c36884a8ac3f1BE469E06a3395035C5`](https://explorer.testnet.chain.robinhood.com/address/0x7d8b2c229c36884a8ac3f1BE469E06a3395035C5) |
+| Uniswap v4 PoolManager | `0x8366a39CC670B4001A1121B8F6A443A643e40951` | `0x8366a39CC670B4001A1121B8F6A443A643e40951` |
 
 All OnTop contracts are verified on the explorer.
 

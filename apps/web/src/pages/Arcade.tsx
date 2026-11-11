@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useStats, useTokens, type TokenSummary } from "../lib/api.ts";
 import { amount, eth, or, usd } from "../lib/format.ts";
 import { scrollToEl } from "../lib/scroll.ts";
+import { HOUSE_SYMBOL } from "../lib/chain.ts";
 import { Art, ChangeText, Poster, PosterSkeleton } from "../components/TokenCard.tsx";
 import { artSrc, ButtonLink, cx, Logo, Segmented, Skeleton, SkeletonLine, Stamp } from "../components/ui.tsx";
 
@@ -302,7 +303,7 @@ function Modes({ tokens, pick }: { tokens: TokenSummary[]; pick: (s: Sort) => vo
               onClick={() => pick(m.sort)}
               className="group relative isolate flex aspect-[16/10] flex-col justify-end overflow-hidden rounded-xl border border-line p-4 text-left transition-colors duration-150 hover:border-line-2"
             >
-              {lead?.symbol === "ONTOP" ? (
+              {lead && lead.symbol === HOUSE_SYMBOL ? (
                 <Logo className="absolute inset-0 -z-20 !h-full !w-full opacity-80" face="object-cover" />
               ) : (
                 src && <img src={src} alt="" aria-hidden className="absolute inset-0 -z-20 h-full w-full object-cover opacity-80 transition-transform duration-500 ease-out [image-rendering:pixelated] group-hover:scale-105" />

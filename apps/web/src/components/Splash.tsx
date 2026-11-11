@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useConfig, useStats, useTokens } from "../lib/api.ts";
-import { chain, network } from "../lib/chain.ts";
+import { chain, HOUSE_SYMBOL, network } from "../lib/chain.ts";
 import { amount } from "../lib/format.ts";
 import { cx, Logo, Wordmark } from "./ui.tsx";
 
@@ -202,7 +202,7 @@ function Boot({ onDone }: { onDone: () => void }) {
     return () => cancelAnimationFrame(raf);
   }, [leaving]);
 
-  const house = tokens?.find((t) => t.symbol === "ONTOP") ?? tokens?.[0];
+  const house = tokens?.find((t) => t.symbol === HOUSE_SYMBOL) ?? tokens?.[0];
   const steps = [
     { text: `LINK ${network.label.toUpperCase()} · CHAIN ${chain.id}`, ok: !!cfg },
     { text: cfg ? `SYNC BLOCK #${cfg.indexed.toLocaleString("en-US")}` : "SYNC BLOCKS", ok: !!cfg },

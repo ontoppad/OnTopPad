@@ -9,5 +9,14 @@ export const deployments = {
     "poolManager": "0x8366a39CC670B4001A1121B8F6A443A643e40951",
     "router": "0x021eC4faf62f071924f1c85d3E9D47448a75CF89",
     "startBlock": 151266401
+  },
+  "mainnet": {
+    "chainId": 4663,
+    "distributor": "0x1d8c1b17a222a3f912dB2b80d0dD3749a4F45e15",
+    "hook": "0xec68d0eBA80A3aFB4Ccb3388a7808c20F886A840",
+    "launchpad": "0xaDDA666a53c0190B3FE4fF5818B6eDadeB3Ae946",
+    "poolManager": "0x8366a39CC670B4001A1121B8F6A443A643e40951",
+    "router": "0x36e7D5b03a86F228601840EE05Cc86eCAE6e6266",
+    "startBlock": 111847491
   }
 } as const;

@@ -6,7 +6,7 @@ import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatUnits, isAddress, parseEther } from "viem";
 import { CREATOR_BPS, HOLDERS_BPS, MAX_BONUS_BPS, MIN_BONUS_BPS, PLATFORM_BPS, TIERS, TREASURY_BPS } from "@ontoppad/shared";
 import { useConfig, useStats, useTokens, type TokenSummary } from "../lib/api.ts";
-import { quote } from "../lib/chain.ts";
+import { HOUSE_SYMBOL, quote } from "../lib/chain.ts";
 import { ago, amount, eth, or, usd } from "../lib/format.ts";
 import { Art } from "../components/TokenCard.tsx";
 import { ContractsTable } from "../components/Contracts.tsx";
@@ -631,7 +631,7 @@ function QuoteCard({ token, ethUsd }: { token?: TokenSummary; ethUsd: number }) 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {token && <TokenArt src={token.image} address={token.address} symbol={token.symbol} size={32} />}
-          <span className="text-[15px] font-medium">Buy ${token?.symbol ?? "ONTOP"}</span>
+          <span className="text-[15px] font-medium">{token ? `Buy $${token.symbol}` : "Buy the first launch"}</span>
         </div>
         <span className="num text-[12px] text-ink-3">[ live quote ]</span>
       </div>
@@ -864,7 +864,7 @@ export default function Home() {
   const { data: cfg } = useConfig();
   const [pill, setPill] = useState<string | null>(null);
   const list = useMemo(() => tokens ?? [], [tokens]);
-  const house = list.find((t) => t.symbol === "ONTOP") ?? list[0];
+  const house = list.find((t) => t.symbol === HOUSE_SYMBOL) ?? list[0];
   const onHover = (h: Hover) => setPill(h?.label ?? null);
   const onPick = (to: string) => {
     setPill(null);

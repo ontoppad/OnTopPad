@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { motion } from "motion/react";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import { TIERS } from "@ontoppad/shared";
-import { addressUrl } from "../lib/chain.ts";
+import { addressUrl, HOUSE_SYMBOL } from "../lib/chain.ts";
 import { short, span } from "../lib/format.ts";
 import { useTokens, type NextTier } from "../lib/api.ts";
 import { coinRain, COINS, coinSrc } from "../lib/fx.ts";
@@ -107,8 +107,8 @@ export function TokenArt({ src, address, symbol, size = 48, className }: { src?:
   const [broken, setBroken] = useState(false);
   const r = Math.max(6, Math.round(size / 5));
   src = artSrc(src);
-  // $ONTOP wears the OnTopPad logo, so it flips like the logo everywhere it shows up
-  if (symbol === "ONTOP") return <Logo size={size} radius={r} alt="$ONTOP" className={className} face={cx("object-cover bg-raised", className)} />;
+  // the house token wears the OnTopPad logo, so it flips like the logo everywhere it shows up
+  if (symbol === HOUSE_SYMBOL) return <Logo size={size} radius={r} alt="$ONTOP" className={className} face={cx("object-cover bg-raised", className)} />;
   if (src && !broken) {
     return (
       <img

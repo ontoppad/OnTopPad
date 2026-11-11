@@ -8,6 +8,9 @@ case "$NETWORK" in
   mainnet) RPC=robinhood; CHAIN=4663; EXPLORER=https://robinhoodchain.blockscout.com/api/; KEY=mainnet-deployer ;;
   *) echo "network must be testnet or mainnet" >&2; exit 1 ;;
 esac
+# RPC_URL / VERIFIER_URL override the endpoints, e.g. when the local DNS can't resolve the chain's hosts
+RPC="${RPC_URL:-$RPC}"
+EXPLORER="${VERIFIER_URL:-$EXPLORER}"
 # mainnet runs on its own wallet, never the one shared with other projects
 set -a; . "../.secrets/$KEY.env"; set +a
 NETWORK="$NETWORK" forge script script/Deploy.s.sol --rpc-url "$RPC" --broadcast --slow \

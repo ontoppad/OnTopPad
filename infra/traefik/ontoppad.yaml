@@ -14,6 +14,18 @@ http:
       middlewares: [ontoppad-headers]
       tls:
         certResolver: letsencrypt
+    ontoppad-mainnet-http:
+      rule: Host(`ontoppad.com`) || Host(`www.ontoppad.com`)
+      entryPoints: [http]
+      middlewares: [ontoppad-https]
+      service: ontoppad-mainnet
+    ontoppad-mainnet:
+      rule: Host(`ontoppad.com`) || Host(`www.ontoppad.com`)
+      entryPoints: [https]
+      service: ontoppad-mainnet
+      middlewares: [ontoppad-headers]
+      tls:
+        certResolver: letsencrypt
   middlewares:
     ontoppad-https:
       redirectScheme:
@@ -28,3 +40,7 @@ http:
       loadBalancer:
         servers:
           - url: http://host.docker.internal:3501
+    ontoppad-mainnet:
+      loadBalancer:
+        servers:
+          - url: http://host.docker.internal:3601

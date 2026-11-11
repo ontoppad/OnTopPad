@@ -4,6 +4,8 @@ import type { TokenSummary } from "./api.ts";
 
 export const network = getNetwork(import.meta.env.VITE_NETWORK ?? "testnet");
 export const chain = network.chain;
+/** The token that wears the OnTopPad logo. Testnet's $ONTOP launched here; mainnet's lives elsewhere, so there a token named ONTOP is just another launch. */
+export const HOUSE_SYMBOL: string | null = network.name === "testnet" ? "ONTOP" : null;
 export const explorer = chain.blockExplorers.default.url;
 export const publicClient = createPublicClient({ chain, transport: http(undefined, { batch: true }) });
 

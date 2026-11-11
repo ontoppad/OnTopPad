@@ -7,6 +7,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import type { TokenSummary } from "../lib/api.ts";
+import { HOUSE_SYMBOL } from "../lib/chain.ts";
 import { artSrc } from "./ui.tsx";
 
 /**
@@ -698,7 +699,7 @@ export default function CrtScene(props: Props) {
       const first = !tokens.length && t.length > 0;
       tokens = t;
       // the house token's real rate on the stamp ident
-      const house = t.find((x) => x.symbol === "ONTOP") ?? t[0];
+      const house = t.find((x) => x.symbol === HOUSE_SYMBOL) ?? t[0];
       if (house && first) {
         extras[0]?.tex?.dispose();
         extras[0] = stampChannel(house.bonusBps, `/token/${house.address}`);
