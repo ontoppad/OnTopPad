@@ -6,6 +6,7 @@ import { TIERS } from "@ontoppad/shared";
 import { addressUrl } from "../lib/chain.ts";
 import { short, span } from "../lib/format.ts";
 import { useTokens, type NextTier } from "../lib/api.ts";
+import { coinRain, COINS, coinSrc } from "../lib/fx.ts";
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 export { cx };
@@ -253,6 +254,46 @@ export function Reveal({ children, className, delay = 0 }: { children: ReactNode
   );
 }
 
+/** The OnTopPad sticker. Hovered, it flips over to a random meme coin; three quick clicks make it rain coins. */
+export function Logo({ size, className, face }: { size: number; className?: string; face?: string }) {
+  const [coin, setCoin] = useState(COINS[0]!);
+  const clicks = useRef<number[]>([]);
+  return (
+    <span
+      className={cx("logo-flip", className)}
+      style={{ width: size, height: size }}
+      onPointerEnter={() => setCoin((c) => COINS.filter((x) => x !== c)[Math.floor(Math.random() * (COINS.length - 1))]!)}
+      onClick={() => {
+        const now = Date.now();
+        clicks.current = [...clicks.current.filter((t) => now - t < 900), now];
+        if (clicks.current.length >= 3) {
+          clicks.current = [];
+          coinRain();
+        }
+      }}
+    >
+      <span>
+        <img src="/brand/logo-256.webp" alt="" width={size} height={size} className={face ?? "rounded-lg"} />
+        <img src={coinSrc(coin)} alt="" width={size} height={size} />
+      </span>
+    </span>
+  );
+}
+
+/** The name in pixel type; the letters hop when the logo's link is hovered. */
+export function Wordmark({ className }: { className?: string }) {
+  return (
+    <span className={cx("wordmark font-logo", className)}>
+      <span className="sr-only">OnTopPad</span>
+      {[..."OnTopPad"].map((ch, i) => (
+        <span key={i} aria-hidden style={{ animationDelay: `${i * 45}ms` }} className={i > 4 ? "text-accent" : undefined}>
+          {ch}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 /** The arcade's page opener: full-bleed, a token's art blurred behind, the sticker logo and a big title. Falls back to the hottest token's art. */
 export function PageHero({ art, badge, kicker, title, sub, children }: { art?: string | null; badge?: ReactNode; kicker?: ReactNode; title: ReactNode; sub?: ReactNode; children?: ReactNode }) {
   const { data: tokens } = useTokens();
@@ -263,7 +304,7 @@ export function PageHero({ art, badge, kicker, title, sub, children }: { art?: s
       <div className="absolute inset-0 -z-10 bg-bg/70" />
       <div className="absolute inset-x-0 bottom-0 -z-10 h-24 bg-gradient-to-b from-transparent to-bg" />
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }} className="flex min-h-[300px] flex-col items-center justify-center gap-5 px-4 py-14 text-center md:min-h-[360px]">
-        {badge ?? <img src="/brand/logo-256.webp" alt="" width={64} height={64} className="rotate-[-4deg] rounded-xl border-2 border-[var(--sticker-shadow)] shadow-[4px_4px_0_var(--sticker-shadow)] transition-transform duration-300 hover:rotate-[4deg] hover:scale-110" />}
+        {badge ?? <Logo size={64} className="rotate-[-4deg] transition-transform duration-300 hover:rotate-[4deg] hover:scale-110" face="rounded-xl border-2 border-[var(--sticker-shadow)] shadow-[4px_4px_0_var(--sticker-shadow)]" />}
         {kicker && <span className="num text-[13px] text-ink-3">{kicker}</span>}
         <h1 className="font-title text-[36px] leading-[1.05] md:text-[64px]">{title}</h1>
         {sub && <p className="max-w-xl text-[16px] leading-7 text-ink-2">{sub}</p>}

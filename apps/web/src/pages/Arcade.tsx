@@ -5,7 +5,7 @@ import { useStats, useTokens, type TokenSummary } from "../lib/api.ts";
 import { amount, eth, or, usd } from "../lib/format.ts";
 import { scrollToEl } from "../lib/scroll.ts";
 import { Art, ChangeText, Poster, PosterSkeleton } from "../components/TokenCard.tsx";
-import { artSrc, ButtonLink, cx, Segmented, Skeleton, SkeletonLine, Stamp } from "../components/ui.tsx";
+import { artSrc, ButtonLink, cx, Logo, Segmented, Skeleton, SkeletonLine, Stamp } from "../components/ui.tsx";
 
 type Sort = "hot" | "new" | "mcap" | "bonus" | "pot" | "holders";
 const SORTS: { value: Sort; label: string }[] = [
@@ -37,7 +37,7 @@ function Hero({ top }: { top?: TokenSummary }) {
       <div className="absolute inset-0 -z-10 bg-bg/70" />
       <div className="absolute inset-x-0 bottom-0 -z-10 h-24 bg-gradient-to-b from-transparent to-bg" />
       <div className="flex min-h-[380px] flex-col items-center justify-center gap-5 px-4 py-16 text-center md:min-h-[440px]">
-        <img src="/brand/logo-256.webp" alt="" width={72} height={72} className="rotate-[-4deg] rounded-xl border-2 border-[var(--sticker-shadow)] shadow-[4px_4px_0_var(--sticker-shadow)]" />
+        <Logo size={72} className="rotate-[-4deg]" face="rounded-xl border-2 border-[var(--sticker-shadow)] shadow-[4px_4px_0_var(--sticker-shadow)]" />
         <h1 className="font-title text-[44px] leading-none md:text-[72px]">The arcade</h1>
         <p className="max-w-xl text-[16px] leading-7 text-ink-2">
           Every token on the board pays a bonus on buys and pays its holders from the trading. Pick one and press start.

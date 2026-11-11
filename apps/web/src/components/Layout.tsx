@@ -7,11 +7,12 @@ import { useActivity, useConfig } from "../lib/api.ts";
 import { chain, contracts, errorText, network } from "../lib/chain.ts";
 import { ago, eth, short } from "../lib/format.ts";
 import { useWallet } from "../lib/wallet.tsx";
-import { Button, cx, Pill, Skeleton, SkeletonLine, TokenArt, usePill } from "./ui.tsx";
+import { Button, cx, Logo, Pill, Skeleton, SkeletonLine, TokenArt, usePill, Wordmark } from "./ui.tsx";
 import { Splash } from "./Splash.tsx";
 import { useToast } from "./toast.tsx";
 import Lenis from "lenis";
 import { smooth } from "../lib/scroll.ts";
+import { playful } from "../lib/fx.ts";
 
 const NAV = [
   { to: "/arcade", label: "Arcade", icon: Gamepad2 },
@@ -210,8 +211,8 @@ function Footer() {
       <div className="grid gap-x-12 gap-y-8 px-4 py-10 md:grid-cols-[1fr_auto] md:px-6 lg:grid-cols-[1fr_auto_auto_auto]">
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
-            <img src="/brand/logo-256.webp" alt="ONTOPPAD" width={40} height={40} className="rounded-lg" />
-            <span className="text-[15px] font-semibold">ONTOPPAD</span>
+            <Logo size={40} />
+            <Wordmark className="text-[13px]" />
           </div>
           <p className="max-w-xs text-[13px] text-ink-2">Start ahead. Stay paid. Every bonus and payout, public and verifiable on {chain.name}.</p>
           <a href="https://x.com/OnTopPad" target="_blank" rel="noreferrer" className="text-[13px] text-ink-2 hover:text-ink">
@@ -302,6 +303,7 @@ export function Layout() {
       l.destroy();
     };
   }, []);
+  useEffect(playful, []);
   useEffect(() => {
     // a plain scrollTo would be undone by leftover inertia from the last page
     if (smooth.lenis) smooth.lenis.scrollTo(0, { immediate: true, force: true });
@@ -312,9 +314,9 @@ export function Layout() {
     <div className="min-h-dvh">
       <header className="sticky top-0 z-40 border-b border-line bg-bg/95">
         <div className="mx-auto flex h-16 items-center gap-4 px-4 md:px-6">
-          <Link to="/" className="flex items-center gap-3 shrink-0" aria-label="ONTOPPAD home">
-            <img src="/brand/logo-256.webp" alt="" width={36} height={36} className="rounded-lg" />
-            <span className="hidden sm:block md:hidden lg:block text-[16px] font-semibold tracking-tight">ONTOPPAD</span>
+          <Link to="/" className="flex items-center gap-3 shrink-0" aria-label="OnTopPad home">
+            <Logo size={36} />
+            <Wordmark className="hidden sm:block md:hidden lg:block text-[13px]" />
           </Link>
           <nav ref={navRef} className="relative ml-4 hidden md:flex items-center gap-1" aria-label="Main">
             <Pill at={pill} />

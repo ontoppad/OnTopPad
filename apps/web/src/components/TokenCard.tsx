@@ -33,7 +33,7 @@ export function Art({ t, className }: { t: { image: string | null; address: stri
 /** The arcade's poster tile: square art, bonus sticker, market cap, and a two-line caption. */
 export function Poster({ t }: { t: TokenSummary }) {
   return (
-    <Link to={`/token/${t.address}`} className="group flex flex-col gap-2">
+    <Link to={`/token/${t.address}`} className="group flex flex-col gap-2 transition-transform duration-150 active:scale-[0.97]">
       <div className="relative aspect-square overflow-hidden rounded-xl border border-line bg-raised transition-[transform,border-color,box-shadow] duration-300 ease-out group-hover:-translate-y-1 group-hover:border-[var(--sticker-shadow)] group-hover:shadow-[4px_4px_0_var(--sticker-shadow)]">
         <Art t={t} className="transition-transform duration-500 ease-out group-hover:scale-[1.06]" />
         <Stamp bps={t.bonusBps} className="absolute left-2 top-2 text-[11px]" />

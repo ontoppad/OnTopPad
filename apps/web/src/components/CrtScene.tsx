@@ -95,7 +95,7 @@ function rebrand(mat: THREE.MeshStandardMaterial) {
   g.rotate(Math.PI / 2);
   g.fillStyle = "#d4d8c8";
   g.font = `700 ${7 * k}px "JetBrains Mono Variable", monospace`;
-  g.fillText("ONTOPPAD", 0, 0);
+  g.fillText("OnTopPad", 0, 0);
   g.font = `${5 * k}px "JetBrains Mono Variable", monospace`;
   g.fillText("Game Station", 38 * k, 0);
   g.restore();

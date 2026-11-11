@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useConfig, useStats, useTokens } from "../lib/api.ts";
 import { chain, network } from "../lib/chain.ts";
 import { amount } from "../lib/format.ts";
-import { cx } from "./ui.tsx";
+import { cx, Logo, Wordmark } from "./ui.tsx";
 
 const KEY = "ontop-booted";
 const MODEL = ["crt.gltf", "television_02.bin", "diff.webp", "nor_gl.webp", "arm.webp"].map((f) => `/models/crt/${f}`);
@@ -278,18 +278,17 @@ function Boot({ onDone }: { onDone: () => void }) {
           Skip ›
         </button>
 
-        <motion.img
-          src="/brand/logo-256.webp"
-          alt=""
-          width={104}
-          height={104}
+        <motion.div
           initial={{ opacity: 0, y: -60, rotate: -20, scale: 0.6 }}
           animate={{ opacity: 1, y: 0, rotate: -4, scale: 1 }}
           transition={{ delay: 0.6, type: "spring", bounce: 0.55, duration: 0.8 }}
-          className="rounded-2xl border-2 border-[var(--sticker-shadow)] shadow-[5px_5px_0_var(--sticker-shadow),0_0_60px_rgb(203_253_0/0.35)]"
-        />
+        >
+          <Logo size={104} face="rounded-2xl border-2 border-[var(--sticker-shadow)] shadow-[5px_5px_0_var(--sticker-shadow),0_0_60px_rgb(203_253_0/0.35)]" />
+        </motion.div>
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.8, duration: 0.5 }} className="flex flex-col items-center gap-2">
-          <h1 className="glitch font-title text-[44px] leading-none text-lime md:text-[84px]">ONTOPPAD</h1>
+          <h1 className="glitch text-lime">
+            <Wordmark className="text-[30px] leading-none md:text-[60px]" />
+          </h1>
           <p className="num text-[11px] tracking-[0.2em] text-ink-2 md:text-[13px]">START AHEAD. STAY PAID.</p>
           <p className="num text-[10px] tracking-[0.2em] text-ink-3 md:text-[11px]">LIVE ON ROBINHOOD CHAIN</p>
         </motion.div>
