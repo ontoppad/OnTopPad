@@ -3,12 +3,12 @@
 export const deployments = {
   "testnet": {
     "chainId": 46630,
-    "distributor": "0x7d8b2c229c36884a8ac3f1BE469E06a3395035C5",
-    "hook": "0xFedFbC1cB4668D9685Dd46815793855e29Fa2840",
-    "launchpad": "0x77426e21dD29D50ae61D4FB410d17B9389AF982f",
+    "distributor": "0xb4BfE3C97793B8a4f66447755300b49cffF8177a",
+    "hook": "0x7827AdF6D641fE022D3b9131d7ce38CdbD112840",
+    "launchpad": "0x43aE0B223b456a8719d45020cC1F4425Dd4Ffd61",
     "poolManager": "0x8366a39CC670B4001A1121B8F6A443A643e40951",
-    "router": "0x021eC4faf62f071924f1c85d3E9D47448a75CF89",
-    "startBlock": 151266401
+    "router": "0x6d59D70da9e11c04cA5beB8DB887cd21C55a8F54",
+    "startBlock": 151920321
   },
   "mainnet": {
     "chainId": 4663,
