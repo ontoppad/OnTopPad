@@ -11,6 +11,8 @@ export const config = {
   rpcUrl: env.RPC_URL || network.chain.rpcUrls.default.http[0],
   privateKey: env.PRIVATE_KEY as `0x${string}` | undefined,
   keeperIntervalSec: Number(env.KEEPER_INTERVAL_SEC ?? 900),
+  // mainnet: the keeper's gas comes out of the fees it moves instead of a wallet someone keeps topping up
+  selfFundedKeeper: env.KEEPER_SELF_FUNDED === "1",
   minHoldUsd: Number(env.MIN_HOLD_USD ?? 1),
   uploadsPerHour: Number(env.UPLOADS_PER_HOUR ?? 10),
   pollMs: 2_000,

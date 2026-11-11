@@ -127,6 +127,7 @@ export default function Rules() {
               <li>How long you have held. Buying more never resets your clock; selling only resets the tokens you sold.</li>
               <li>Wallets holding under {usd(cfg?.minHoldUsd ?? 1)} of a token sit out that round. Their share rolls into the next one.</li>
               <li>Payouts land in ETH, several times a day. No staking, no claiming, no points.</li>
+              <li>The keeper's gas refund on a round is capped on-chain at 2% of it.</li>
             </ul>
             <div className="mt-6 grid grid-cols-3 gap-2" role="tablist" aria-label="Hold-time tiers">
               {TIERS.map((t, i) => (

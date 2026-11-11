@@ -1,12 +1,20 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { feeFor, buyerEdge, startTickForFdv, priceFromTick, MIN_BONUS_BPS, MAX_BONUS_BPS, SUPPLY } from "./math.ts";
+import { feeFor, buyerEdge, startTickForFdv, priceFromTick, deliveryFee, roundGas, MIN_BONUS_BPS, MAX_BONUS_BPS, SUPPLY } from "./math.ts";
 import { tierFor, weightOf, DAY } from "./tiers.ts";
 
 test("feeFor matches the Solidity formula and keeps buyers >= 1% ahead", () => {
   assert.equal(feeFor(300), 19_417);
   assert.equal(feeFor(900), 73_394);
   for (let b = MIN_BONUS_BPS; b <= MAX_BONUS_BPS; b += 50) assert.ok(buyerEdge(b) >= 0.01 - 1e-9);
+});
+
+test("deliveryFee refunds the round's gas only while the contract's 2% cap holds", () => {
+  const gp = 20_000_000n; // 0.02 gwei, Robinhood Chain mainnet
+  const gas = gp * roundGas(5);
+  assert.equal(deliveryFee(gp, 5, gas * 49n), gas); // fee is exactly 2% of paid + fee: the contract accepts it
+  assert.equal(deliveryFee(gp, 5, gas * 49n - 1n), null); // a wei less paid and it would revert FeeTooHigh
+  assert.equal(deliveryFee(0n, 5, 0n), 0n); // testnet-style free rounds still go through
 });
 
 test("start tick round-trips to the requested FDV within one tick spacing", () => {

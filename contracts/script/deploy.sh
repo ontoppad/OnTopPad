@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# Usage: script/deploy.sh testnet|mainnet   (reads PRIVATE_KEY from ../.secrets/deployer.env)
+# Usage: script/deploy.sh testnet|mainnet   (reads PRIVATE_KEY from ../.secrets/deployer.env, or mainnet-deployer.env on mainnet)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 NETWORK="$1"
 case "$NETWORK" in
-  testnet) RPC=robinhood_testnet; CHAIN=46630; EXPLORER=https://explorer.testnet.chain.robinhood.com/api/ ;;
-  mainnet) RPC=robinhood; CHAIN=4663; EXPLORER=https://robinhoodchain.blockscout.com/api/ ;;
+  testnet) RPC=robinhood_testnet; CHAIN=46630; EXPLORER=https://explorer.testnet.chain.robinhood.com/api/; KEY=deployer ;;
+  mainnet) RPC=robinhood; CHAIN=4663; EXPLORER=https://robinhoodchain.blockscout.com/api/; KEY=mainnet-deployer ;;
   *) echo "network must be testnet or mainnet" >&2; exit 1 ;;
 esac
-set -a; . ../.secrets/deployer.env; set +a
+# mainnet runs on its own wallet, never the one shared with other projects
+set -a; . "../.secrets/$KEY.env"; set +a
 NETWORK="$NETWORK" forge script script/Deploy.s.sol --rpc-url "$RPC" --broadcast --slow \
   --verify --verifier blockscout --verifier-url "$EXPLORER"
 node -e '

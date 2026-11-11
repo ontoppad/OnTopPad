@@ -8,6 +8,19 @@ export const CREATOR_BPS = 1_500;
 export const PLATFORM_BPS = 1_000;
 export const TICK_SPACING = 60;
 export const MAX_START_TICK = 690_000;
+/** OnTopDistributor.MAX_DELIVERY_BPS: the most a payout round may hand the keeper for its gas. */
+export const MAX_DELIVERY_BPS = 200;
+/** Gas of one OnTopLaunchpad.collect, measured on testnet (~164k) with headroom. */
+export const COLLECT_GAS = 180_000n;
+
+/** Gas of one distribute call: measured on testnet at ~79k plus ~12.9k per recipient, with headroom. */
+export const roundGas = (recipients: number) => 85_000n + 13_500n * BigInt(recipients);
+
+/** The keeper's gas refund for one distribute call paying `paid` in total, or null when the contract's 2% cap can't carry it. */
+export function deliveryFee(gasPrice: bigint, recipients: number, paid: bigint): bigint | null {
+  const fee = gasPrice * roundGas(recipients);
+  return fee * 10_000n > (paid + fee) * BigInt(MAX_DELIVERY_BPS) ? null : fee;
+}
 
 /** LP fee in ppm for a bonus — same rounding as OnTopLaunchpad.feeFor. */
 export function feeFor(bonusBps: number): number {
