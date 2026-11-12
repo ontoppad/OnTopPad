@@ -88,9 +88,11 @@ async function refresh() {
         return (await res.json()) as Page;
       }),
     );
-    const next = toTokens(pages);
+    const rows = toTokens(pages);
+    await fillLogos(rows);
+    // the board only shows a token with its real logo; one with none anywhere waits until it gets one
+    const next = rows.filter((r) => r.image);
     if (!next.length) return;
-    await fillLogos(next);
     items = next;
     updatedAt = Math.floor(Date.now() / 1000);
     setMeta("market", JSON.stringify(items));
