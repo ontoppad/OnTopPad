@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useStats, useTokens, type TokenSummary } from "../lib/api.ts";
-import { amount, eth, or, usd } from "../lib/format.ts";
+import { amount, bps, eth, or, usd } from "../lib/format.ts";
 import { scrollToEl } from "../lib/scroll.ts";
 import { HOUSE_SYMBOL } from "../lib/chain.ts";
 import { Art, ChangeText, Poster, PosterSkeleton } from "../components/TokenCard.tsx";
@@ -66,41 +67,105 @@ function Hero({ top }: { top?: TokenSummary }) {
 
 // ───────────── top 5 ─────────────
 
-/** Square art at its own aspect: a wide crop of a 512px logo blew it up 2–3× and blurred it. */
+/** Price line for the picked token; drawn only when there is movement to show. */
+function Spark({ points }: { points: number[] }) {
+  const lo = Math.min(...points), hi = Math.max(...points);
+  if (points.length < 3 || !(hi > lo)) return null;
+  const d = points.map((v, i) => `${((i / (points.length - 1)) * 100).toFixed(2)},${(36 - ((v - lo) / (hi - lo)) * 32).toFixed(2)}`).join(" ");
+  return (
+    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-16 w-full" aria-hidden>
+      <polyline points={d} fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** Square art at its own aspect (a wide crop of a 512px logo blurred it); picking a card opens its details on the band. */
 function TopFive({ tokens }: { tokens: TokenSummary[] }) {
   const top = tokens.slice(0, 5);
-  if (!top.length) return null;
+  const [pick, setPick] = useState(0);
+  const t = top[Math.min(pick, top.length - 1)];
+  if (!t) return null;
+  const rank = top.indexOf(t) + 1;
+  const stats: [string, string][] = [
+    ["Market cap", usd(t.fdvUsd)],
+    ["Volume 24h", or(t.volume24hUsd, usd, "first day live")],
+    ["Bonus on buys", `+${bps(t.bonusBps)}`],
+    ["Holders", or(t.holders, (n) => n.toLocaleString("en-US"), "first holder wins")],
+    [t.paid ? "Paid to holders" : "In the pot", t.paid ? eth(t.paid) : or(t.pot, (v) => eth(v), "filling")],
+    ["Trades", or(t.trades, (n) => n.toLocaleString("en-US"), "first trade pending")],
+  ];
   return (
-    <section className="relative isolate mt-16 px-4 pb-16 md:px-[6%]">
-      {/* the slanted band echoes the cut of the PAD box in the logo */}
-      <div aria-hidden className="absolute inset-x-0 bottom-0 top-48 -z-10 bg-lime [clip-path:polygon(0_14%,100%_0,100%_100%,0_100%)] md:top-56" />
+    <section className="relative isolate mt-16 px-4 md:px-[6%]">
+      {/* the slanted band echoes the cut of the PAD box in the logo, and carries the picked token's details */}
+      <div aria-hidden className="absolute inset-x-0 bottom-0 top-48 -z-10 bg-lime [clip-path:polygon(0_8%,100%_0,100%_100%,0_100%)] md:top-56" />
       <h2 className="font-title text-center text-[30px] leading-[1.05] md:text-[48px]">Top 5 on the board right now</h2>
-      <p className="mt-2 text-center text-[15px] text-ink-2">Ranked by 24h volume, straight from the chain</p>
+      <p className="mt-2 text-center text-[15px] text-ink-2">Ranked by 24h volume, straight from the chain. Pick one to see its numbers</p>
       <ol className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 lg:gap-5">
-        {top.map((t, i) => (
-          <li key={t.address} className={i === 0 ? "col-span-2 sm:col-span-1" : undefined}>
-            <Link
-              to={`/token/${t.address}`}
-              className="group flex h-full flex-col overflow-hidden rounded-2xl border-2 border-[var(--sticker-shadow)] bg-card shadow-[4px_4px_0_var(--sticker-shadow)] transition-transform duration-150 hover:-translate-y-1"
+        {top.map((x, i) => (
+          <li key={x.address} className={i === 0 ? "col-span-2 sm:col-span-1" : undefined}>
+            <button
+              type="button"
+              onClick={() => setPick(i)}
+              aria-pressed={x === t}
+              className={cx(
+                "group flex h-full w-full flex-col overflow-hidden rounded-2xl border-2 border-[var(--sticker-shadow)] bg-card text-left transition-[transform,box-shadow] duration-200",
+                x === t ? "-translate-y-2 shadow-[6px_6px_0_var(--sticker-shadow)]" : "shadow-[3px_3px_0_var(--sticker-shadow)] hover:-translate-y-1",
+              )}
             >
               <div className="relative aspect-square overflow-hidden bg-raised">
-                <Art t={t} className="transition-transform duration-500 ease-out group-hover:scale-[1.04]" />
-                <span className={cx("num absolute left-2 top-2 grid h-9 min-w-9 place-items-center rounded-lg px-2 text-[16px] font-bold", i === 0 ? "bg-lime text-lime-ink" : "bg-[var(--sticker-shadow)] text-lime")}>#{i + 1}</span>
-                <Stamp bps={t.bonusBps} className="absolute right-2 top-2 text-[11px]" />
+                <Art t={x} className="transition-transform duration-500 ease-out group-hover:scale-[1.04]" />
+                <span className={cx("num absolute left-2 top-2 grid h-9 min-w-9 place-items-center rounded-lg px-2 text-[16px] font-bold", x === t ? "bg-lime text-lime-ink" : "bg-[var(--sticker-shadow)] text-lime")}>#{i + 1}</span>
+                <Stamp bps={x.bonusBps} className="absolute right-2 top-2 text-[11px]" />
               </div>
               <div className="flex flex-1 flex-col gap-1 p-3">
-                <span className="truncate text-[15px] font-semibold">{t.name}</span>
-                <span className="num text-[12px] text-ink-3">${t.symbol}</span>
+                <span className="truncate text-[15px] font-semibold">{x.name}</span>
+                <span className="num text-[12px] text-ink-3">${x.symbol}</span>
                 <div className="mt-auto flex flex-wrap items-baseline justify-between gap-x-2 pt-2">
-                  <span className="num text-[14px] font-medium">{usd(t.fdvUsd)}</span>
-                  <ChangeText t={t} />
+                  <span className="num text-[14px] font-medium">{usd(x.fdvUsd)}</span>
+                  <ChangeText t={x} />
                 </div>
-                <span className="num text-[12px] text-ink-3">{or(t.volume24hUsd, (v) => `${usd(v)} traded 24h`, `${t.holders} holders`)}</span>
               </div>
-            </Link>
+            </button>
           </li>
         ))}
       </ol>
+
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={t.address}
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          className="grid gap-8 pb-16 pt-10 text-lime-ink md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:gap-12"
+        >
+          <div className="flex flex-col gap-3">
+            <span className="num text-[13px] opacity-70">[ #{rank} on the board ]</span>
+            <div className="flex flex-wrap items-baseline gap-3">
+              <h3 className="font-title text-[32px] leading-tight md:text-[40px]">{t.name}</h3>
+              <span className="num text-[15px] opacity-70">${t.symbol}</span>
+            </div>
+            <p className="max-w-xl text-[15px] leading-6 opacity-80">{t.description ?? `${t.holders} holders sharing every payout round.`}</p>
+            <Spark points={t.spark} />
+            <div className="mt-1 flex flex-wrap gap-3">
+              <Link to={`/token/${t.address}`} className="inline-flex h-11 items-center rounded-full bg-[var(--sticker-shadow)] px-6 text-[14px] font-semibold text-lime transition-opacity duration-150 hover:opacity-85">
+                Play ${t.symbol}
+              </Link>
+              <Link to={`/token/${t.address}`} className="inline-flex h-11 items-center rounded-full border-2 border-[var(--sticker-shadow)] px-5 text-[14px] font-semibold transition-colors duration-150 hover:bg-[var(--sticker-shadow)] hover:text-lime">
+                Chart & holders
+              </Link>
+            </div>
+          </div>
+          <dl className="grid grid-cols-2 gap-3 self-start sm:grid-cols-3">
+            {stats.map(([k, v]) => (
+              <div key={k} className="rounded-xl border-2 border-[var(--sticker-shadow)] bg-white/35 p-4">
+                <dt className="num text-[12px] opacity-70">{k}</dt>
+                <dd className="num mt-1 text-[18px] font-semibold leading-tight">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </motion.div>
+      </AnimatePresence>
     </section>
   );
 }
