@@ -142,9 +142,10 @@ function Carousel({ tokens }: { tokens: TokenSummary[] }) {
   useEffect(() => {
     const el = track.current;
     if (!el) return;
+    // by scroll progress, not by the leftmost card: the last cards never reach the left edge, so the end of the reel must still light the last dot
     const onScroll = () => {
-      const card = el.firstElementChild as HTMLElement | null;
-      if (card) setActive(Math.round(el.scrollLeft / (card.offsetWidth + 16)));
+      const max = el.scrollWidth - el.clientWidth;
+      setActive(max > 0 ? Math.round((el.scrollLeft / max) * (el.childElementCount - 1)) : 0);
     };
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
