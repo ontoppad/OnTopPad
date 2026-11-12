@@ -21,7 +21,7 @@ export const robinhoodMainnet = defineChain({
 });
 
 /** $ONTOP, launched outside OnTopPad on Robinhood Chain mainnet; null until it is live. */
-export const ONTOP: Address | null = null;
+export const ONTOP: Address | null = "0x417346c368aD1c3Cb564373f409D2DACE8017361";
 
 export type NetworkName = "testnet" | "mainnet";
 
