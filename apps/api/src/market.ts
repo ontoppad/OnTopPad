@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { createPublicClient, http, parseAbi, type Address } from "viem";
-import { robinhoodMainnet } from "@ontoppad/shared";
+import { ONTOP, robinhoodMainnet } from "@ontoppad/shared";
 import { getMeta, setMeta } from "./db.ts";
 import { mediaDir, sniffImage } from "./metadata.ts";
 
@@ -36,8 +36,10 @@ const STOCK = /Robinhood Token$/;
 
 let items: MarketToken[] = JSON.parse(getMeta("market") ?? "[]");
 let updatedAt = Number(getMeta("marketAt") ?? 0);
+// $ONTOP gets its own featured slot, never a numbered row
+let house: MarketToken | null = JSON.parse(getMeta("marketHouse") ?? "null");
 
-export const getMarket = () => ({ items, updatedAt });
+export const getMarket = () => ({ items, updatedAt, house });
 
 interface Pool {
   attributes: Record<string, any>;
@@ -79,16 +81,32 @@ export function toTokens(pages: Page[]): MarketToken[] {
   return [...best.values()].sort((a, b) => b.volume24hUsd - a.volume24hUsd).slice(0, 30);
 }
 
-async function refresh() {
+/** $ONTOP's busiest pool where it is the base token, live numbers only. */
+export const pickHouse = (page: Page, address: string) => toTokens([page]).find((r) => r.address === address.toLowerCase()) ?? null;
+
+async function get(path: string): Promise<Page> {
+  const res = await fetch(`${SRC}/${path}`, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(10_000) });
+  if (!res.ok) throw new Error(`geckoterminal ${res.status}`);
+  return (await res.json()) as Page;
+}
+
+async function refreshHouse() {
+  if (!ONTOP) return;
   try {
-    const pages = await Promise.all(
-      ["pools", "new_pools"].map(async (path) => {
-        const res = await fetch(`${SRC}/${path}?page=1&include=base_token`, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(10_000) });
-        if (!res.ok) throw new Error(`geckoterminal ${res.status}`);
-        return (await res.json()) as Page;
-      }),
-    );
-    const rows = toTokens(pages);
+    const row = pickHouse(await get(`tokens/${ONTOP}/pools?page=1&include=base_token`), ONTOP);
+    if (!row) return;
+    house = row;
+    setMeta("marketHouse", JSON.stringify(row));
+  } catch {
+    // keep the last good numbers
+  }
+}
+
+async function refresh() {
+  await refreshHouse();
+  try {
+    const pages = await Promise.all(["pools", "new_pools"].map((path) => get(`${path}?page=1&include=base_token`)));
+    const rows = toTokens(pages).filter((r) => r.address !== ONTOP?.toLowerCase());
     await fillLogos(rows);
     // the board only shows a token with its real logo; one with none anywhere waits until it gets one
     const next = rows.filter((r) => r.image);
@@ -98,7 +116,7 @@ async function refresh() {
     setMeta("market", JSON.stringify(items));
     setMeta("marketAt", updatedAt);
   } catch {
-    // keep the last good board (free tier is 30 calls/min; we make 2 every 2 minutes)
+    // keep the last good board (free tier is 30 calls/min; we make 3 every 2 minutes)
   }
 }
 

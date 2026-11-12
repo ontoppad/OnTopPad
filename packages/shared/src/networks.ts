@@ -20,6 +20,9 @@ export const robinhoodMainnet = defineChain({
   contracts: { multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11" } },
 });
 
+/** $ONTOP, launched outside OnTopPad on Robinhood Chain mainnet; null until it is live. */
+export const ONTOP: Address | null = null;
+
 export type NetworkName = "testnet" | "mainnet";
 
 export interface Quote {

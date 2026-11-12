@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { useMarket, type MarketToken } from "../lib/api.ts";
 import { ago, pct, price, usd } from "../lib/format.ts";
-import { artSrc, ButtonLink, cx, SkeletonRows, TokenArt } from "./ui.tsx";
+import { artSrc, ButtonLink, cx, Logo, SkeletonRows, TokenArt } from "./ui.tsx";
 
 const COLS = "grid grid-cols-[28px_1fr_auto] items-center gap-3 md:grid-cols-[36px_1.6fr_1fr_0.8fr_1fr_1fr_0.7fr_24px] md:gap-4";
 
@@ -14,10 +14,53 @@ function MarketLogo({ t }: { t: MarketToken }) {
   return <img src={src} alt={`$${t.symbol}`} width={32} height={32} loading="lazy" decoding="async" onError={() => setBroken(true)} className="size-8 shrink-0 rounded-full bg-raised object-cover" />;
 }
 
+/** $ONTOP lives outside the pad, so it gets a featured slot above the numbered market rows. */
+function House({ t }: { t: MarketToken }) {
+  const stats: [string, string, string?][] = [
+    ["price", price(t.priceUsd)],
+    ["24h", t.change24h ? pct(t.change24h, 1) : "flat", t.change24h >= 0 ? "text-up" : "text-down-ink"],
+    ["market cap", usd(t.fdvUsd)],
+    ["volume 24h", usd(t.volume24hUsd)],
+    ["liquidity", usd(t.liquidityUsd)],
+    ["txns 24h", t.txns24h.toLocaleString("en-US")],
+  ];
+  return (
+    <a
+      href={`https://www.geckoterminal.com/robinhood/pools/${t.pool}`}
+      target="_blank"
+      rel="noreferrer"
+      className="group mt-10 grid gap-6 rounded-2xl border border-accent bg-card p-5 transition-colors duration-150 hover:bg-raised md:p-6 lg:grid-cols-[minmax(220px,auto)_1fr_auto] lg:items-center"
+    >
+      <span className="flex items-center gap-4">
+        <Logo size={56} alt="$ONTOP" />
+        <span className="min-w-0">
+          <span className="num block text-[12px] text-accent">[ house token ]</span>
+          <span className="block truncate text-[20px] font-medium">{t.name}</span>
+          <span className="num block text-[12px] text-ink-3">
+            ${t.symbol} · {t.dex}
+          </span>
+        </span>
+      </span>
+      <dl className="grid grid-cols-3 gap-4 md:grid-cols-6">
+        {stats.map(([k, v, tone]) => (
+          <div key={k}>
+            <dt className="num text-[12px] text-ink-3">{k}</dt>
+            <dd className={cx("num mt-1 text-[15px]", tone)}>{v}</dd>
+          </div>
+        ))}
+      </dl>
+      <span className="num inline-flex items-center gap-2 text-[13px] text-ink-2 transition-colors duration-150 group-hover:text-ink">
+        trade ${t.symbol}
+        <ExternalLink size={14} strokeWidth={1.5} />
+      </span>
+    </a>
+  );
+}
+
 /** What the rest of Robinhood Chain is trading right now, so the pad sits inside a live market. */
 export function ChainMarket({ limit = 12, className }: { limit?: number; className?: string }) {
   const { data } = useMarket();
-  if (data && !data.items.length) return null;
+  if (data && !data.items.length && !data.house) return null;
   const rows = data?.items.slice(0, limit);
   return (
     <section data-ch="On chain" className={cx("px-4 py-24 md:px-6", className)}>
@@ -32,7 +75,9 @@ export function ChainMarket({ limit = 12, className }: { limit?: number; classNa
         </ButtonLink>
       </div>
 
-      <div className="mt-10 overflow-hidden rounded-2xl border border-line bg-card">
+      {data?.house ? <House t={data.house} /> : null}
+
+      <div className={cx("overflow-hidden rounded-2xl border border-line bg-card", data?.house ? "mt-4" : "mt-10")}>
         <div className={cx(COLS, "num border-b border-line px-5 py-3 text-[12px] text-ink-3")}>
           <span>#</span>
           <span>token</span>

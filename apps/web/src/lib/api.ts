@@ -207,7 +207,7 @@ const live = (ms: number) => ({ refetchInterval: ms, staleTime: ms / 2 });
 
 export const useConfig = () => useQuery({ queryKey: ["config"], queryFn: () => api<Config>("/config"), ...live(10_000) });
 export const useStats = () => useQuery({ queryKey: ["stats"], queryFn: () => api<Stats>("/stats"), ...live(8_000) });
-export const useMarket = () => useQuery({ queryKey: ["market"], queryFn: () => api<{ items: MarketToken[]; updatedAt: number }>("/market"), ...live(60_000) });
+export const useMarket = () => useQuery({ queryKey: ["market"], queryFn: () => api<{ items: MarketToken[]; updatedAt: number; house: MarketToken | null }>("/market"), ...live(60_000) });
 export const useTokens = (sort = "hot") =>
   useQuery({
     queryKey: ["tokens", sort],

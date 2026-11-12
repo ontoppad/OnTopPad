@@ -4,7 +4,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 
 process.env.DATA_DIR = mkdtempSync(`${tmpdir()}/ontop-test-`);
-const { toTokens } = await import("./market.ts");
+const { pickHouse, toTokens } = await import("./market.ts");
 
 const pool = (addr: string, base: string, vol: number, liq = 5000) => ({
   attributes: {
@@ -31,4 +31,10 @@ test("one row per token, busiest pool wins, quotes and dead pools drop out", () 
   assert.equal(rows[0]!.dex, "uniswap-v4");
   assert.equal(rows[0]!.txns24h, 4);
   assert.equal(rows[1]!.image, null);
+});
+
+test("house row: only the pool where $ONTOP is the base token", () => {
+  const page = { data: [pool("p1", "0xO", 40), pool("p2", "0xX", 900)], included: [tok("0xO", "ONTOP"), tok("0xX", "PAIRED")] };
+  assert.equal(pickHouse(page, "0xo")?.pool, "p1");
+  assert.equal(pickHouse(page, "0xZ"), null);
 });
