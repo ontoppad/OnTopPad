@@ -1,4 +1,9 @@
+import { createHash } from "node:crypto";
+import { writeFileSync } from "node:fs";
+import { createPublicClient, http, parseAbi, type Address } from "viem";
+import { robinhoodMainnet } from "@ontoppad/shared";
 import { getMeta, setMeta } from "./db.ts";
+import { mediaDir, sniffImage } from "./metadata.ts";
 
 /** A token trading anywhere on Robinhood Chain mainnet, as GeckoTerminal sees it. */
 export interface MarketToken {
@@ -20,6 +25,11 @@ export interface MarketToken {
 const SRC = "https://api.geckoterminal.com/api/v2/networks/robinhood";
 // quote assets, not tokens anyone is hunting
 const SKIP = new Set(["WETH", "ETH", "USDG", "USDC", "USDT"]);
+
+// the market is mainnet whichever network this process runs
+const mainnet = createPublicClient({ chain: robinhoodMainnet, transport: http(undefined, { batch: true }) });
+const IPFS = ["https://gateway.pinata.cloud/ipfs/", "https://ipfs.io/ipfs/", "https://dweb.link/ipfs/"];
+const logos: Record<string, string> = JSON.parse(getMeta("marketLogos") ?? "{}");
 
 let items: MarketToken[] = JSON.parse(getMeta("market") ?? "[]");
 let updatedAt = Number(getMeta("marketAt") ?? 0);
@@ -77,6 +87,7 @@ async function refresh() {
     );
     const next = toTokens(pages);
     if (!next.length) return;
+    await fillLogos(next);
     items = next;
     updatedAt = Math.floor(Date.now() / 1000);
     setMeta("market", JSON.stringify(items));
@@ -84,6 +95,55 @@ async function refresh() {
   } catch {
     // keep the last good board (free tier is 30 calls/min; we make 2 every 2 minutes)
   }
+}
+
+/** Pull a token's IPFS logo once and serve it from our own media, so a slow gateway never blanks a row. */
+async function pinLogo(uri: string): Promise<string | null> {
+  if (uri.startsWith("https://")) return uri;
+  const cid = uri.match(/^ipfs:\/\/(?:ipfs\/)?([\w/.-]+)$/)?.[1];
+  if (!cid) return null;
+  for (const g of IPFS) {
+    try {
+      const res = await fetch(g + cid, { signal: AbortSignal.timeout(15_000) });
+      const b = new Uint8Array(await res.arrayBuffer());
+      const ext = res.ok && b.byteLength <= 2 * 1024 * 1024 ? sniffImage(b) : null;
+      if (!ext) continue;
+      const file = `${createHash("sha256").update(b).digest("hex").slice(0, 32)}.${ext}`;
+      writeFileSync(`${mediaDir}/${file}`, b);
+      return `/api/media/${file}`;
+    } catch {
+      // next gateway
+    }
+  }
+  return null;
+}
+
+/** Logos GeckoTerminal lacks: DexScreener profiles first, then the token's own on-chain logo(). Hits are kept for good. */
+async function fillLogos(rows: MarketToken[]) {
+  // fills each row from the cache and returns the rows still bare
+  const missing = () => rows.filter((r) => !(r.image ||= logos[r.address] ?? null));
+  if (!missing().length) return;
+  try {
+    const res = await fetch(`https://api.dexscreener.com/tokens/v1/robinhood/${missing().map((r) => r.address).join(",")}`, { signal: AbortSignal.timeout(10_000) });
+    for (const p of (await res.json()) as { baseToken: { address: string }; info?: { imageUrl?: string } }[]) {
+      const img = p.info?.imageUrl;
+      if (img?.startsWith("https://")) logos[p.baseToken.address.toLowerCase()] = img;
+    }
+  } catch {
+    // on-chain next
+  }
+  const left = missing();
+  const uris = await mainnet
+    .multicall({ contracts: left.map((r) => ({ address: r.address as Address, abi: parseAbi(["function logo() view returns (string)"]), functionName: "logo" })) })
+    .catch(() => []);
+  await Promise.all(
+    uris.map(async (u, i) => {
+      const img = u.status === "success" ? await pinLogo(u.result) : null;
+      if (img) logos[left[i]!.address] = img;
+    }),
+  );
+  missing();
+  setMeta("marketLogos", JSON.stringify(logos));
 }
 
 export function runMarketFeed() {

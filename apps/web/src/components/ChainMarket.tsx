@@ -1,9 +1,18 @@
+import { useState } from "react";
 import { ExternalLink } from "lucide-react";
-import { useMarket } from "../lib/api.ts";
+import { useMarket, type MarketToken } from "../lib/api.ts";
 import { ago, pct, price, usd } from "../lib/format.ts";
-import { ButtonLink, cx, SkeletonRows, TokenArt } from "./ui.tsx";
+import { artSrc, ButtonLink, cx, SkeletonRows, TokenArt } from "./ui.tsx";
 
 const COLS = "grid grid-cols-[28px_1fr_auto] items-center gap-3 md:grid-cols-[36px_1.6fr_1fr_0.8fr_1fr_1fr_0.7fr_24px] md:gap-4";
+
+/** The token's real logo, smoothly scaled (TokenArt's pixelated look is for pad art); the sprite only if it fails to load. */
+function MarketLogo({ t }: { t: MarketToken }) {
+  const [broken, setBroken] = useState(false);
+  const src = artSrc(t.image);
+  if (!src || broken) return <TokenArt address={t.address} symbol={t.symbol} size={32} />;
+  return <img src={src} alt={`$${t.symbol}`} width={32} height={32} loading="lazy" decoding="async" onError={() => setBroken(true)} className="size-8 shrink-0 rounded-full bg-raised object-cover" />;
+}
 
 /** What the rest of Robinhood Chain is trading right now, so the pad sits inside a live market. */
 export function ChainMarket({ limit = 12, className }: { limit?: number; className?: string }) {
@@ -47,7 +56,7 @@ export function ChainMarket({ limit = 12, className }: { limit?: number; classNa
             >
               <span className="num text-[13px] text-ink-3">{String(i + 1).padStart(2, "0")}</span>
               <span className="flex min-w-0 items-center gap-3">
-                <TokenArt src={t.image} address={t.address} symbol={t.symbol} size={32} />
+                <MarketLogo t={t} />
                 <span className="min-w-0">
                   <span className="block truncate text-[14px] font-medium">{t.name}</span>
                   <span className="num block truncate text-[12px] text-ink-3">
