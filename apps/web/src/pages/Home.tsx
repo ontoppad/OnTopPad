@@ -2,12 +2,12 @@ import { Fragment, lazy, Suspense, useEffect, useMemo, useRef, useState, type Po
 import { Link, useNavigate } from "react-router";
 import { animate, AnimatePresence, motion, useInView, useMotionValue, useMotionValueEvent, useScroll, useSpring, useTransform, type MotionValue } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, Check, ChevronLeft, ChevronRight, Copy, ExternalLink } from "lucide-react";
 import { formatUnits, isAddress, parseEther } from "viem";
-import { CREATOR_BPS, HOLDERS_BPS, MAX_BONUS_BPS, MIN_BONUS_BPS, PLATFORM_BPS, TIERS, TREASURY_BPS } from "@ontoppad/shared";
+import { CREATOR_BPS, HOLDERS_BPS, MAX_BONUS_BPS, MIN_BONUS_BPS, ONTOP, PLATFORM_BPS, robinhoodMainnet, TIERS, TREASURY_BPS } from "@ontoppad/shared";
 import { useConfig, useStats, useTokens, type TokenSummary } from "../lib/api.ts";
 import { HOUSE_SYMBOL, quote } from "../lib/chain.ts";
-import { ago, amount, eth, or, usd } from "../lib/format.ts";
+import { ago, amount, eth, or, short, usd } from "../lib/format.ts";
 import { Art } from "../components/TokenCard.tsx";
 import { ContractsTable } from "../components/Contracts.tsx";
 import { ChainMarket } from "../components/ChainMarket.tsx";
@@ -242,6 +242,39 @@ function useArrived() {
   return go;
 }
 
+/** $ONTOP's contract address, one tap to copy; it trades on Robinhood Chain mainnet whichever network this build is. */
+function OntopCa({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <span className="num inline-flex items-center rounded-xl border border-white/35 bg-black/40 text-[12px] text-ink-2 backdrop-blur md:text-[13px]">
+      <button
+        type="button"
+        aria-label="Copy the $ONTOP contract address"
+        className="inline-flex h-9 items-center gap-2 rounded-l-xl pl-3 pr-2 transition-colors duration-150 hover:text-ink"
+        onClick={() => {
+          void navigator.clipboard.writeText(address);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1200);
+        }}
+      >
+        <span className="text-lime">$ONTOP CA</span>
+        <span className="sm:hidden">{short(address)}</span>
+        <span className="hidden sm:inline">{address}</span>
+        {copied ? <Check size={14} strokeWidth={1.5} className="text-lime" /> : <Copy size={14} strokeWidth={1.5} />}
+      </button>
+      <a
+        href={`${robinhoodMainnet.blockExplorers.default.url}/token/${address}`}
+        target="_blank"
+        rel="noreferrer"
+        aria-label="$ONTOP on the explorer"
+        className="inline-flex h-9 items-center border-l border-white/20 px-3 transition-colors duration-150 hover:text-ink"
+      >
+        <ExternalLink size={14} strokeWidth={1.5} />
+      </a>
+    </span>
+  );
+}
+
 function Hero({ tokens, onHover, onPick }: { tokens: TokenSummary[]; onHover: (h: Hover) => void; onPick: (to: string) => void }) {
   const ref = useRef<HTMLElement>(null);
   const leave = useLeave(ref);
@@ -289,6 +322,11 @@ function Hero({ tokens, onHover, onPick }: { tokens: TokenSummary[]; onHover: (h
                 Launch a token
               </Link>
             </div>
+            {ONTOP ? (
+              <div className="pointer-events-auto">
+                <OntopCa address={ONTOP} />
+              </div>
+            ) : null}
             <span className="num hidden text-[11px] text-ink-3 pointer-fine:block">Point at a screen to tune in</span>
           </motion.div>
         </motion.div>
