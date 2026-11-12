@@ -6,7 +6,7 @@ import { artSrc, ButtonLink, cx, SkeletonRows, TokenArt } from "./ui.tsx";
 
 const COLS = "grid grid-cols-[28px_1fr_auto] items-center gap-3 md:grid-cols-[36px_1.6fr_1fr_0.8fr_1fr_1fr_0.7fr_24px] md:gap-4";
 
-/** The token's real logo, smoothly scaled (TokenArt's pixelated look is for pad art); the sprite only if it fails to load. */
+/** The token's real logo, round like the aggregators show it; the sprite only if it fails to load. */
 function MarketLogo({ t }: { t: MarketToken }) {
   const [broken, setBroken] = useState(false);
   const src = artSrc(t.image);

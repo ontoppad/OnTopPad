@@ -119,7 +119,7 @@ export function TokenArt({ src, address, symbol, size = 48, className }: { src?:
         loading="lazy"
         decoding="async"
         onError={() => setBroken(true)}
-        className={cx("shrink-0 object-cover [image-rendering:pixelated] bg-raised", className)}
+        className={cx("shrink-0 object-cover bg-raised", className)}
         style={{ width: size, height: size, borderRadius: r }}
       />
     );

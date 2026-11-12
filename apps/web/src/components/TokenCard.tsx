@@ -21,12 +21,12 @@ export function ChangeText({ t }: { t: TokenSummary }) {
   );
 }
 
-/** Pixel art blown up edge to edge; it stays crisp because the browser scales it nearest-neighbour. */
+/** Token art edge to edge, smoothly scaled so any style (pixel, vector, photo) holds up at every size. */
 export function Art({ t, className }: { t: { image: string | null; address: string; symbol: string }; className?: string }) {
   const src = artSrc(t.image);
   if (t.symbol === HOUSE_SYMBOL) return <Logo className={cx("!h-full !w-full", className)} face="object-cover" />;
   return src ? (
-    <img src={src} alt="" loading="lazy" decoding="async" className={cx("h-full w-full object-cover [image-rendering:pixelated]", className)} />
+    <img src={src} alt="" loading="lazy" decoding="async" className={cx("h-full w-full object-cover", className)} />
   ) : (
     <TokenArt address={t.address} symbol={t.symbol} size={512} className={cx("!h-full !w-full !rounded-none", className)} />
   );

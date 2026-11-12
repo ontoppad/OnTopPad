@@ -307,7 +307,7 @@ function Modes({ tokens, pick }: { tokens: TokenSummary[]; pick: (s: Sort) => vo
               {lead && lead.symbol === HOUSE_SYMBOL ? (
                 <Logo className="absolute inset-0 -z-20 !h-full !w-full opacity-80" face="object-cover" />
               ) : (
-                src && <img src={src} alt="" aria-hidden className="absolute inset-0 -z-20 h-full w-full object-cover opacity-80 transition-transform duration-500 ease-out [image-rendering:pixelated] group-hover:scale-105" />
+                src && <img src={src} alt="" aria-hidden className="absolute inset-0 -z-20 h-full w-full object-cover opacity-80 transition-transform duration-500 ease-out group-hover:scale-105" />
               )}
               <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/85 via-black/45 to-black/10" />
               <span className="text-[15px] font-semibold text-white">{m.title}</span>

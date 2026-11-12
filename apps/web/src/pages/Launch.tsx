@@ -170,7 +170,7 @@ export default function Launch() {
                       <span className="text-[13px] text-ink-2">Artwork</span>
                       <div className="flex items-center gap-4">
                         <div className="grid size-24 place-items-center overflow-hidden rounded-xl border-2 border-[var(--sticker-shadow)] bg-deep shadow-[4px_4px_0_var(--sticker-shadow)]">
-                          {preview ? <motion.img key={preview} initial={{ scale: 0.6, rotate: -8, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ type: "spring", bounce: 0.4, duration: 0.5 }} src={preview} alt="Token artwork preview" className="size-full object-cover [image-rendering:pixelated]" /> : <ImagePlus size={24} strokeWidth={1.5} className="text-ink-3" />}
+                          {preview ? <motion.img key={preview} initial={{ scale: 0.6, rotate: -8, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ type: "spring", bounce: 0.4, duration: 0.5 }} src={preview} alt="Token artwork preview" className="size-full object-cover" /> : <ImagePlus size={24} strokeWidth={1.5} className="text-ink-3" />}
                         </div>
                         <div className="flex flex-col gap-2">
                           <label className="inline-flex h-9 cursor-pointer items-center rounded-full border border-line-2 bg-raised px-4 text-[13px] transition-colors duration-150 hover:bg-card">
@@ -255,7 +255,7 @@ export default function Launch() {
                 {step === 3 && (
                   <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-4">
-                      {preview && <img src={preview} alt="" className="size-16 rounded-xl object-cover [image-rendering:pixelated]" />}
+                      {preview && <img src={preview} alt="" className="size-16 rounded-xl object-cover" />}
                       <div>
                         <p className="text-[20px] font-semibold">{name || "Unnamed"}</p>
                         <p className="num text-[14px] text-ink-3">${symbol || "TICKER"}</p>
@@ -299,7 +299,7 @@ export default function Launch() {
               <div className="group mt-3 overflow-hidden rounded-2xl border-2 border-[var(--sticker-shadow)] bg-card shadow-[6px_6px_0_var(--sticker-shadow)] transition-transform duration-300 hover:-rotate-1">
                 <div className="relative aspect-[16/10] overflow-hidden bg-raised">
                   {preview ? (
-                    <img src={preview} alt="" className="h-full w-full object-cover [image-rendering:pixelated] transition-transform duration-500 group-hover:scale-105" />
+                    <img src={preview} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                   ) : (
                     <TokenArt address={symbol || name || "ONTOP"} symbol={symbol} size={512} className="!h-full !w-full !rounded-none" />
                   )}
