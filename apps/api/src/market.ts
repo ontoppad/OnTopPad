@@ -29,7 +29,10 @@ const SKIP = new Set(["WETH", "ETH", "USDG", "USDC", "USDT"]);
 // the market is mainnet whichever network this process runs
 const mainnet = createPublicClient({ chain: robinhoodMainnet, transport: http(undefined, { batch: true }) });
 const IPFS = ["https://gateway.pinata.cloud/ipfs/", "https://ipfs.io/ipfs/", "https://dweb.link/ipfs/"];
-const logos: Record<string, string> = JSON.parse(getMeta("marketLogos") ?? "{}");
+// address → pinned /api/media path
+const logos: Record<string, string> = JSON.parse(getMeta("marketLogoFiles") ?? "{}");
+// Robinhood's tokenized stocks and ETFs, e.g. "NVIDIA • Robinhood Token"
+const STOCK = /Robinhood Token$/;
 
 let items: MarketToken[] = JSON.parse(getMeta("market") ?? "[]");
 let updatedAt = Number(getMeta("marketAt") ?? 0);
@@ -55,7 +58,7 @@ export function toTokens(pages: Page[]): MarketToken[] {
     if (!t || SKIP.has(t.symbol.toUpperCase())) continue;
     const row: MarketToken = {
       address: t.address.toLowerCase(),
-      name: t.name,
+      name: t.name.replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/&quot;/g, '"'),
       symbol: t.symbol,
       image: t.image_url?.startsWith("https://") ? t.image_url : null,
       pool: a.address,
@@ -97,14 +100,13 @@ async function refresh() {
   }
 }
 
-/** Pull a token's IPFS logo once and serve it from our own media, so a slow gateway never blanks a row. */
+/** Download a logo once and serve it from our own media, so no third-party CDN or IPFS gateway can blank a row. */
 async function pinLogo(uri: string): Promise<string | null> {
-  if (uri.startsWith("https://")) return uri;
   const cid = uri.match(/^ipfs:\/\/(?:ipfs\/)?([\w/.-]+)$/)?.[1];
-  if (!cid) return null;
-  for (const g of IPFS) {
+  const urls = cid ? IPFS.map((g) => g + cid) : uri.startsWith("https://") ? [uri] : [];
+  for (const u of urls) {
     try {
-      const res = await fetch(g + cid, { signal: AbortSignal.timeout(15_000) });
+      const res = await fetch(u, { headers: { accept: "image/webp,image/png,image/jpeg,image/gif" }, signal: AbortSignal.timeout(15_000) });
       const b = new Uint8Array(await res.arrayBuffer());
       const ext = res.ok && b.byteLength <= 2 * 1024 * 1024 ? sniffImage(b) : null;
       if (!ext) continue;
@@ -112,38 +114,48 @@ async function pinLogo(uri: string): Promise<string | null> {
       writeFileSync(`${mediaDir}/${file}`, b);
       return `/api/media/${file}`;
     } catch {
-      // next gateway
+      // next source
     }
   }
   return null;
 }
 
-/** Logos GeckoTerminal lacks: DexScreener profiles first, then the token's own on-chain logo(). Hits are kept for good. */
+/**
+ * Every row's real logo, pinned locally. Sources in order: the company logo for Robinhood stock tokens
+ * (CoinGecko gives them all the same Robinhood feather), GeckoTerminal, DexScreener, the token's own logo().
+ * Hits are kept for good; misses are retried each refresh.
+ */
 async function fillLogos(rows: MarketToken[]) {
-  // fills each row from the cache and returns the rows still bare
-  const missing = () => rows.filter((r) => !(r.image ||= logos[r.address] ?? null));
-  if (!missing().length) return;
-  try {
-    const res = await fetch(`https://api.dexscreener.com/tokens/v1/robinhood/${missing().map((r) => r.address).join(",")}`, { signal: AbortSignal.timeout(10_000) });
-    for (const p of (await res.json()) as { baseToken: { address: string }; info?: { imageUrl?: string } }[]) {
-      const img = p.info?.imageUrl;
-      if (img?.startsWith("https://")) logos[p.baseToken.address.toLowerCase()] = img;
+  const todo = rows.filter((r) => !logos[r.address]);
+  if (todo.length) {
+    const dex: Record<string, string> = {};
+    try {
+      const res = await fetch(`https://api.dexscreener.com/tokens/v1/robinhood/${todo.map((r) => r.address).join(",")}`, { signal: AbortSignal.timeout(10_000) });
+      for (const p of (await res.json()) as { baseToken: { address: string }; info?: { imageUrl?: string } }[]) {
+        if (p.info?.imageUrl) dex[p.baseToken.address.toLowerCase()] = p.info.imageUrl;
+      }
+    } catch {
+      // other sources still apply
     }
-  } catch {
-    // on-chain next
+    const chain = await mainnet
+      .multicall({ contracts: todo.map((r) => ({ address: r.address as Address, abi: parseAbi(["function logo() view returns (string)"]), functionName: "logo" })) })
+      .catch(() => []);
+    await Promise.all(
+      todo.map(async (r, i) => {
+        const own = chain[i]?.status === "success" ? chain[i].result : undefined;
+        const stock = STOCK.test(r.name) ? `https://financialmodelingprep.com/image-stock/${encodeURIComponent(r.symbol)}.png` : undefined;
+        for (const src of [stock, stock ? undefined : r.image, dex[r.address], own]) {
+          const local = src && (await pinLogo(src));
+          if (local) {
+            logos[r.address] = local;
+            break;
+          }
+        }
+      }),
+    );
+    setMeta("marketLogoFiles", JSON.stringify(logos));
   }
-  const left = missing();
-  const uris = await mainnet
-    .multicall({ contracts: left.map((r) => ({ address: r.address as Address, abi: parseAbi(["function logo() view returns (string)"]), functionName: "logo" })) })
-    .catch(() => []);
-  await Promise.all(
-    uris.map(async (u, i) => {
-      const img = u.status === "success" ? await pinLogo(u.result) : null;
-      if (img) logos[left[i]!.address] = img;
-    }),
-  );
-  missing();
-  setMeta("marketLogos", JSON.stringify(logos));
+  for (const r of rows) r.image = logos[r.address] ?? null;
 }
 
 export function runMarketFeed() {
