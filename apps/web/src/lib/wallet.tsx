@@ -31,6 +31,28 @@ interface WalletState {
 const Ctx = createContext<WalletState | null>(null);
 const KEY = "ontop-wallet";
 
+async function switchChain(provider: EIP1193Provider) {
+  const hex = numberToHex(chain.id);
+  try {
+    await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: hex }] });
+  } catch (e) {
+    // unknown chain is 4902 on desktop, but MetaMask Mobile and others wrap it in other codes: add it unless the user said no
+    if ((e as { code?: number }).code === 4001) throw e;
+    await provider.request({
+      method: "wallet_addEthereumChain",
+      params: [
+        {
+          chainId: hex,
+          chainName: chain.name,
+          nativeCurrency: chain.nativeCurrency,
+          rpcUrls: chain.rpcUrls.default.http,
+          blockExplorerUrls: [chain.blockExplorers!.default.url],
+        },
+      ],
+    });
+  }
+}
+
 function remember(rdns: string | null) {
   try {
     if (rdns) localStorage.setItem(KEY, rdns);
@@ -72,10 +94,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const bind = useCallback(async (p: ProviderDetail, ask: boolean) => {
     const accounts = (await p.provider.request({ method: ask ? "eth_requestAccounts" : "eth_accounts" })) as Address[];
     if (!accounts[0]) return;
+    const id = Number(await p.provider.request({ method: "eth_chainId" }));
     setActive(p);
     setAddress(accounts[0]);
-    setChainId(Number(await p.provider.request({ method: "eth_chainId" })));
+    setChainId(id);
     remember(p.info.rdns);
+    return id;
   }, []);
 
   // silent reconnect to the last wallet used
@@ -112,24 +136,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const ensureChain = useCallback(async () => {
     if (!active || chainId === chain.id) return;
-    const hex = numberToHex(chain.id);
-    try {
-      await active.provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: hex }] });
-    } catch (e) {
-      if ((e as { code?: number }).code !== 4902) throw e;
-      await active.provider.request({
-        method: "wallet_addEthereumChain",
-        params: [
-          {
-            chainId: hex,
-            chainName: chain.name,
-            nativeCurrency: chain.nativeCurrency,
-            rpcUrls: chain.rpcUrls.default.http,
-            blockExplorerUrls: [chain.blockExplorers!.default.url],
-          },
-        ],
-      });
-    }
+    await switchChain(active.provider);
     setChainId(chain.id);
   }, [active, chainId]);
 
@@ -155,8 +162,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     openPicker: () => setPicker(true),
     closePicker: () => setPicker(false),
     connect: async (p) => {
-      await bind(p, true);
+      const id = await bind(p, true);
       setPicker(false);
+      // switch here with p itself: the ensureChain a caller holds was made before `active` was set
+      if (id !== undefined && id !== chain.id) {
+        await switchChain(p.provider);
+        setChainId(chain.id);
+      }
     },
     disconnect: () => {
       setActive(undefined);

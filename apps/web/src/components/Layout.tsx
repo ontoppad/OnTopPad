@@ -109,7 +109,7 @@ function WalletPicker() {
               {w.providers.map((p) => (
                 <button
                   key={p.info.uuid}
-                  onClick={() => void w.connect(p).then(w.ensureChain).catch((e) => toast({ title: "Wallet not connected", body: errorText(e), tone: "error" }))}
+                  onClick={() => void w.connect(p).catch((e) => toast({ title: "Wallet not connected", body: errorText(e), tone: "error" }))}
                   className="flex h-12 items-center gap-3 rounded-[10px] border border-line bg-raised px-3 text-left text-sm hover:border-line-2 hover:bg-deep transition-colors duration-150"
                 >
                   {p.info.icon ? <img src={p.info.icon} alt="" className="size-6 rounded-md" /> : <Wallet size={18} strokeWidth={1.5} className="text-ink-2" />}
