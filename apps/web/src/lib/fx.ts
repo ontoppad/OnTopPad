@@ -1,8 +1,8 @@
 // Arcade juice: pixel sparks on every press and a coin shower for the curious. DOM-only, nothing to render.
 
-/** The meme coins the logo flips into: the best known on any chain, then Robinhood Chain's own. */
-export const COINS = ["doge", "shib", "pepe", "bonk", "wif", "pons", "cashcat"];
-export const coinSrc = (c: string) => `/brand/coins/${c}.webp`;
+/** The meme coins the logo flips into, the best known on any chain; vector, so sharp at any size the flip or the rain shows them. */
+export const COINS = ["doge", "shib", "pepe", "bonk", "wif", "floki", "popcat"];
+export const coinSrc = (c: string) => `/brand/coins/${c}.svg`;
 
 const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
