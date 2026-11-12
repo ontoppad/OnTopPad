@@ -8,6 +8,7 @@ import { scrollToEl } from "../lib/scroll.ts";
 import { HOUSE_SYMBOL } from "../lib/chain.ts";
 import { Art, ChangeText, Poster, PosterSkeleton } from "../components/TokenCard.tsx";
 import { ChainMarket } from "../components/ChainMarket.tsx";
+import { ArcadeSidebar } from "../components/ArcadeSidebar.tsx";
 import { artSrc, ButtonLink, cx, Logo, Segmented, Skeleton, SkeletonLine, Stamp } from "../components/ui.tsx";
 
 type Sort = "hot" | "new" | "mcap" | "bonus" | "pot" | "holders";
@@ -362,6 +363,17 @@ function Modes({ tokens, pick }: { tokens: TokenSummary[]; pick: (s: Sort) => vo
 // ───────────── page ─────────────
 
 export default function Arcade() {
+  return (
+    <div className="xl:grid xl:grid-cols-[300px_minmax(0,1fr)]">
+      <ArcadeSidebar />
+      <div className="min-w-0">
+        <ArcadeMain />
+      </div>
+    </div>
+  );
+}
+
+function ArcadeMain() {
   const [params, setParams] = useSearchParams();
   const initial = params.get("sort") as Sort | null;
   const [sort, setSortState] = useState<Sort>(SORTS.some((s) => s.value === initial) ? initial! : "hot");

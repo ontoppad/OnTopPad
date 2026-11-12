@@ -5,7 +5,7 @@ import { eth, or, pct, usd } from "../lib/format.ts";
 import { artSrc, cx, Logo, Skeleton, SkeletonLine, Stamp, TokenArt } from "./ui.tsx";
 
 /** Change since launch when the token is younger than a day, otherwise 24h. */
-function change(t: TokenSummary) {
+export function change(t: TokenSummary) {
   const young = Date.now() / 1000 - t.launchedAt < 86_400;
   const v = young ? ((t.price - t.startPrice) / t.startPrice) * 100 : t.change24h;
   return { v, label: young ? "since launch" : "24h" };
