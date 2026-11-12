@@ -1,10 +1,12 @@
 // Interactive verification run for screen recording: checks every OnTop contract on the RPC and on the explorer.
+// Usage: node scripts/verify-contracts.mjs testnet|mainnet   (RPC_URL overrides the chain's RPC)
 import { spawn } from "node:child_process";
 import { emitKeypressEvents } from "node:readline";
 import { networks } from "../packages/shared/src/networks.ts";
 
-const net = networks.testnet;
-const RPC = net.chain.rpcUrls.default.http[0];
+const net = networks[process.argv[2] ?? "testnet"];
+if (!net) throw new Error("network must be testnet or mainnet");
+const RPC = process.env.RPC_URL || net.chain.rpcUrls.default.http[0];
 const EXPLORER = net.chain.blockExplorers.default.url;
 const CONTRACTS = [
   { key: "launchpad", role: "Launches every token and its Uniswap v4 pool" },
@@ -65,11 +67,32 @@ async function rpc(method, params = []) {
   return result;
 }
 
-async function explorerInfo(address) {
+async function blockscoutInfo(address) {
   const res = await fetch(`${EXPLORER}/api/v2/smart-contracts/${address}`);
   if (!res.ok) throw new Error(`explorer HTTP ${res.status}`);
-  return res.json();
+  return { ...(await res.json()), source: "Blockscout" };
 }
+
+// mainnet's Blockscout API answers scripts with a Cloudflare challenge; Sourcify holds the same verification and Blockscout reads it
+async function sourcifyInfo(address) {
+  const res = await fetch(`https://sourcify.dev/server/v2/contract/${net.chain.id}/${address}?fields=compilation`);
+  if (res.status === 404) return { is_verified: false, source: "Sourcify" };
+  if (!res.ok) throw new Error(`Sourcify HTTP ${res.status}`);
+  const d = await res.json();
+  const c = d.compilation ?? {};
+  return {
+    name: c.name,
+    is_verified: !!d.match,
+    is_partially_verified: d.match !== "exact_match",
+    compiler_version: c.compilerVersion && `v${c.compilerVersion}`,
+    optimization_runs: c.compilerSettings?.optimizer?.runs,
+    evm_version: c.compilerSettings?.evmVersion,
+    verified_at: d.verifiedAt,
+    source: "Sourcify",
+  };
+}
+
+const explorerInfo = (address) => blockscoutInfo(address).catch(() => sourcifyInfo(address));
 
 function openUrl(url) {
   const [cmd, args] = process.platform === "darwin" ? ["open", [url]] : process.platform === "win32" ? ["cmd", ["/c", "start", "", url]] : ["xdg-open", [url]];
@@ -140,7 +163,7 @@ async function main() {
     out(`  ${dim("Explorer")} ${link(url)}`);
     out(`  ${dim("Bytecode")} ${bytes.toLocaleString("en-US")} bytes on-chain`);
     if (info.compiler_version) out(`  ${dim("Compiler")} solc ${info.compiler_version.split("+")[0].slice(1)} · optimizer ${info.optimization_runs} runs · ${info.evm_version}`);
-    if (info.verified_at) out(`  ${dim("Verified")} ${new Date(info.verified_at).toUTCString()}`);
+    if (info.verified_at) out(`  ${dim("Verified")} ${new Date(info.verified_at).toUTCString()} ${dim(`· ${info.source}`)}`);
     if (ok) {
       xp += XP_PER;
       out(`  ${badge("✔ VERIFIED", "34;230;120")} ${badge("✔ PUBLISHED", "34;230;120")} ${badge("✔ EXACT MATCH", "34;230;120")}  ${gold(`+${XP_PER} XP`)}`);

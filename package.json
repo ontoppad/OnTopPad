@@ -14,7 +14,8 @@
     "contracts:build": "cd contracts && forge build",
     "contracts:test": "cd contracts && forge test",
     "contracts:sync": "node scripts/sync-contracts.mjs",
-    "testnet:verify": "node --experimental-strip-types --no-warnings scripts/testnet-verify.mjs"
+    "testnet:verify": "node --experimental-strip-types --no-warnings scripts/verify-contracts.mjs testnet",
+    "mainnet:verify": "node --experimental-strip-types --no-warnings scripts/verify-contracts.mjs mainnet"
   },
   "devDependencies": {
     "typescript": "5.9.3",
