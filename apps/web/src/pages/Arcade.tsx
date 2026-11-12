@@ -64,70 +64,43 @@ function Hero({ top }: { top?: TokenSummary }) {
   );
 }
 
-// ───────────── spotlight ─────────────
+// ───────────── top 5 ─────────────
 
-function Spotlight({ tokens }: { tokens: TokenSummary[] }) {
-  const [lead, ...rest] = tokens;
-  if (!lead) return null;
+/** Square art at its own aspect: a wide crop of a 512px logo blew it up 2–3× and blurred it. */
+function TopFive({ tokens }: { tokens: TokenSummary[] }) {
+  const top = tokens.slice(0, 5);
+  if (!top.length) return null;
   return (
-    <section className="relative isolate mt-16">
-      <h2 className="font-title px-4 text-center text-[30px] leading-[1.05] md:text-[48px]">Top of the board right now</h2>
-      <p className="mt-2 px-4 text-center text-[15px] text-ink-2">Ranked by 24h volume, straight from the chain</p>
-      <div className="relative z-10 mt-10 px-4 md:px-[6%]">
-        <Link to={`/token/${lead.address}`} className="group relative block">
-          <div className="relative aspect-[21/9] overflow-hidden rounded-2xl border-2 border-[var(--sticker-shadow)] bg-raised md:aspect-[21/8]">
-            <Art t={lead} className="transition-transform duration-500 ease-out group-hover:scale-[1.02]" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-            <Stamp bps={lead.bonusBps} className="absolute right-4 top-4 text-[14px]" />
-          </div>
-        </Link>
-      </div>
-      <div className="relative px-4 md:px-[6%]">
-        {/* the slanted band echoes the cut of the PAD box in the logo; anchored here so the copy always sits on it */}
-        <div aria-hidden className="absolute inset-x-0 -top-24 bottom-0 -z-10 bg-lime [clip-path:polygon(0_18%,100%_0,100%_100%,0_100%)] md:-top-44" />
-        <div className="relative grid gap-6 md:grid-cols-[minmax(0,360px)_1fr] md:items-start">
-          <Link
-            to={`/token/${lead.address}`}
-            className="relative z-20 -mt-16 ml-4 block aspect-square w-40 overflow-hidden rounded-2xl border-2 border-[var(--sticker-shadow)] bg-raised shadow-[6px_6px_0_var(--sticker-shadow)] md:-mt-28 md:ml-10 md:w-72"
-          >
-            <Art t={lead} />
-          </Link>
-          <div className="flex flex-col gap-3 pb-10 text-lime-ink md:pt-6">
-            <div className="flex flex-wrap items-baseline gap-3">
-              <h3 className="text-[28px] leading-tight font-semibold">{lead.name}</h3>
-              <span className="num text-[15px] opacity-70">${lead.symbol}</span>
-            </div>
-            <p className="max-w-2xl text-[15px] leading-6 opacity-80">{lead.description ?? `${lead.holders} holders sharing every payout round.`}</p>
-            <p className="num text-[13px]">
-              <b>{usd(lead.fdvUsd)}</b> market cap · <b>{or(lead.holders, String, "first")}</b> holders · <b>{lead.paid ? eth(lead.paid) : eth(lead.pot)}</b> {lead.paid ? "paid to holders" : "in the pot"}
-            </p>
-            <Link to={`/token/${lead.address}`} className="mt-1 inline-flex h-10 w-fit items-center rounded-full bg-[var(--sticker-shadow)] px-5 text-[14px] font-semibold text-lime transition-opacity duration-150 hover:opacity-85">
-              Play ${lead.symbol}
-            </Link>
-          </div>
-        </div>
-
-        <div className="grid gap-6 pb-16 md:grid-cols-2 md:gap-8">
-          {rest.slice(0, 2).map((t) => (
-            <Link key={t.address} to={`/token/${t.address}`} className="group flex flex-col gap-4 text-lime-ink">
-              <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border-2 border-[var(--sticker-shadow)] bg-raised">
-                <Art t={t} className="transition-transform duration-500 ease-out group-hover:scale-[1.02]" />
-                <Stamp bps={t.bonusBps} className="absolute right-3 top-3" />
+    <section className="relative isolate mt-16 px-4 pb-16 md:px-[6%]">
+      {/* the slanted band echoes the cut of the PAD box in the logo */}
+      <div aria-hidden className="absolute inset-x-0 bottom-0 top-48 -z-10 bg-lime [clip-path:polygon(0_14%,100%_0,100%_100%,0_100%)] md:top-56" />
+      <h2 className="font-title text-center text-[30px] leading-[1.05] md:text-[48px]">Top 5 on the board right now</h2>
+      <p className="mt-2 text-center text-[15px] text-ink-2">Ranked by 24h volume, straight from the chain</p>
+      <ol className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 lg:gap-5">
+        {top.map((t, i) => (
+          <li key={t.address} className={i === 0 ? "col-span-2 sm:col-span-1" : undefined}>
+            <Link
+              to={`/token/${t.address}`}
+              className="group flex h-full flex-col overflow-hidden rounded-2xl border-2 border-[var(--sticker-shadow)] bg-card shadow-[4px_4px_0_var(--sticker-shadow)] transition-transform duration-150 hover:-translate-y-1"
+            >
+              <div className="relative aspect-square overflow-hidden bg-raised">
+                <Art t={t} className="transition-transform duration-500 ease-out group-hover:scale-[1.04]" />
+                <span className={cx("num absolute left-2 top-2 grid h-9 min-w-9 place-items-center rounded-lg px-2 text-[16px] font-bold", i === 0 ? "bg-lime text-lime-ink" : "bg-[var(--sticker-shadow)] text-lime")}>#{i + 1}</span>
+                <Stamp bps={t.bonusBps} className="absolute right-2 top-2 text-[11px]" />
               </div>
-              <div className="flex flex-col gap-2">
-                <h3 className="text-[22px] font-semibold">
-                  {t.name} <span className="num text-[14px] opacity-70">${t.symbol}</span>
-                </h3>
-                <p className="line-clamp-2 text-[14px] opacity-80">{t.description ?? `${t.holders} holders, ${t.trades} trades so far.`}</p>
-                <p className="num text-[13px]">
-                  <b>{usd(t.fdvUsd)}</b> · {or(t.holders, (n) => `${n} holders`, "first holder wins")} · {or(t.bonusPaid, (v) => `${amount(v)} bonus paid`, "bonus ready")}
-                </p>
-                <span className="mt-1 inline-flex h-9 w-fit items-center rounded-full bg-[var(--sticker-shadow)] px-4 text-[13px] font-semibold text-lime">Play ${t.symbol}</span>
+              <div className="flex flex-1 flex-col gap-1 p-3">
+                <span className="truncate text-[15px] font-semibold">{t.name}</span>
+                <span className="num text-[12px] text-ink-3">${t.symbol}</span>
+                <div className="mt-auto flex flex-wrap items-baseline justify-between gap-x-2 pt-2">
+                  <span className="num text-[14px] font-medium">{usd(t.fdvUsd)}</span>
+                  <ChangeText t={t} />
+                </div>
+                <span className="num text-[12px] text-ink-3">{or(t.volume24hUsd, (v) => `${usd(v)} traded 24h`, `${t.holders} holders`)}</span>
               </div>
             </Link>
-          ))}
-        </div>
-      </div>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }
@@ -367,7 +340,7 @@ export default function Arcade() {
   return (
     <div>
       <Hero top={tokens[0]} />
-      <Spotlight tokens={tokens} />
+      <TopFive tokens={tokens} />
       {tokens.length > 3 && <Carousel tokens={tokens.slice(0, 12)} />}
       <Board key={q} initialQ={q} tokens={tokens} sort={sort} setSort={setSort} />
       <ChainMarket limit={30} className="border-t border-line" />
