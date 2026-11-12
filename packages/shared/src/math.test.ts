@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { feeFor, buyerEdge, startTickForFdv, priceFromTick, deliveryFee, roundGas, MIN_BONUS_BPS, MAX_BONUS_BPS, SUPPLY } from "./math.ts";
+import { feeFor, buyerEdge, startTickForFdv, priceFromTick, deliveryFee, roundGas, potForRound, MIN_POT_WEI, MIN_BONUS_BPS, MAX_BONUS_BPS, SUPPLY } from "./math.ts";
 import { tierFor, weightOf, DAY } from "./tiers.ts";
 
 test("feeFor matches the Solidity formula and keeps buyers >= 1% ahead", () => {
@@ -15,6 +15,15 @@ test("deliveryFee refunds the round's gas only while the contract's 2% cap holds
   assert.equal(deliveryFee(gp, 5, gas * 49n), gas); // fee is exactly 2% of paid + fee: the contract accepts it
   assert.equal(deliveryFee(gp, 5, gas * 49n - 1n), null); // a wei less paid and it would revert FeeTooHigh
   assert.equal(deliveryFee(0n, 5, 0n), 0n); // testnet-style free rounds still go through
+});
+
+test("potForRound is the smallest pot whose round passes the keeper's reserve and the 2% cap", () => {
+  const gp = 20_000_000n;
+  const need = potForRound(gp, 5);
+  const reserve = gp * roundGas(5);
+  assert.equal(deliveryFee(gp, 5, need - reserve), reserve); // the pot left after the reserve carries the fee
+  assert.equal(deliveryFee(gp, 5, need - reserve - 1n), null);
+  assert.equal(potForRound(0n, 5), MIN_POT_WEI); // testnet: only the dust floor
 });
 
 test("start tick round-trips to the requested FDV within one tick spacing", () => {

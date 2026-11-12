@@ -1,5 +1,5 @@
-import { TIERS, tierFor, nextTier, HOLDERS_BPS } from "@ontoppad/shared";
-import { db } from "./db.ts";
+import { TIERS, tierFor, nextTier, HOLDERS_BPS, potForRound } from "@ontoppad/shared";
+import { db, getMeta } from "./db.ts";
 import { quoteSymbol } from "./chain.ts";
 import { getEthUsd } from "./price.ts";
 
@@ -61,6 +61,8 @@ export function summarize(r: Row) {
     r.last_collect_at ?? 0,
   )!.v as number;
   const pot = Math.max(0, r.to_holders - r.distributed) + (uncollected * r.fee_ppm * HOLDERS_BPS) / 1e6 / 1e4;
+  // shortcut: sized for every holder, the keeper drops the ones under MIN_HOLD_USD, so this slightly overstates the need
+  const potNeed = Number(potForRound(BigInt(getMeta("keeperGasPrice") ?? "0"), r.holders)) / 1e18;
   return {
     address: r.address,
     name: r.name,
@@ -101,6 +103,8 @@ export function summarize(r: Row) {
     bonusBuys: r.bonus_buys,
     pot,
     potUsd: pot * usd,
+    potNeed,
+    nextRoundAt: Number(getMeta("keeperNextAt")) || null,
     paid: r.paid,
     paidUsd: r.paid * usd,
     creatorEarned: r.to_creator,
@@ -320,6 +324,14 @@ export function wallet(address: string) {
   const paidTotal = one("SELECT COALESCE(SUM(amount), 0) AS v, COUNT(*) AS n FROM payouts WHERE account = ?", address)!;
   const trades = all("SELECT * FROM trades WHERE trader = ? ORDER BY ts DESC, log_index DESC LIMIT 50", address).map(tradeOut);
   const launched = all("SELECT address, name, symbol, launched_at FROM tokens WHERE creator = ?", address);
+  // sold out of completely: the hold pet ran away
+  const runaways = all(
+    `SELECT x.token, t.name, t.symbol, t.meta_json, MIN(x.ts) AS since, MAX(CASE WHEN x.is_buy = 0 THEN x.ts END) AS left_at
+     FROM trades x JOIN tokens t ON t.address = x.token
+     WHERE x.trader = :a AND x.token NOT IN (SELECT token FROM balances WHERE account = :a)
+     GROUP BY x.token HAVING left_at IS NOT NULL ORDER BY left_at DESC LIMIT 24`,
+    { a: address },
+  ).map((r) => ({ token: r.token, name: r.name, symbol: r.symbol, image: meta(r)?.image ?? null, since: r.since, leftAt: r.left_at }));
   return {
     address,
     holdings: holdings.sort((a, b) => b.valueUsd - a.valueUsd),
@@ -331,6 +343,7 @@ export function wallet(address: string) {
     payoutsCount: paidTotal.n,
     trades,
     launched,
+    runaways,
   };
 }
 

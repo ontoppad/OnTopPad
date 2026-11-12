@@ -8,6 +8,8 @@ import { addressUrl, txUrl } from "../lib/chain.ts";
 import { ago, amount, eth, isHouse, or, price, share, short, usd } from "../lib/format.ts";
 import { CandleChart } from "../components/Chart.tsx";
 import { TradePanel } from "../components/TradePanel.tsx";
+import { PetCard, type Mood } from "../components/Pet.tsx";
+import { PotMeter } from "../components/PotMeter.tsx";
 import { ChangeText, Poster, PosterSkeleton } from "../components/TokenCard.tsx";
 import { AddressChip, artSrc, ButtonLink, Card, cx, Heading, Reveal, Segmented, Skeleton, SkeletonLine, SkeletonRows, Spec, Stamp, TierMeter, TokenArt } from "../components/ui.tsx";
 
@@ -214,6 +216,8 @@ export default function Token() {
   const { data: cfg } = useConfig();
   const [tf, setTf] = useState<(typeof TF)[number]["value"]>("300");
   const [tab, setTab] = useState<"trades" | "holders" | "rounds" | "specs">("trades");
+  // the pet's reaction to a trade made on this page, tied to the token it was made on
+  const [mood, setMood] = useState<(Mood & { token: string }) | null>(null);
   const { data: candles } = useCandles(address.toLowerCase(), Number(tf));
   const { data: all } = useTokens();
   const ethUsd = cfg?.ethUsd ?? 0;
@@ -366,20 +370,15 @@ export default function Token() {
           </div>
 
           <div className="flex flex-col gap-4 lg:sticky lg:top-28 lg:self-start">
-            <TradePanel token={t} ethUsd={ethUsd} />
+            <TradePanel key={t.address} token={t} ethUsd={ethUsd} onTrade={(kind) => setMood((m) => ({ kind, n: (m?.n ?? 0) + 1, token: t.address }))} />
+            <PetCard key={t.address} t={t} mood={mood?.token === t.address ? mood : null} />
+            <PotMeter t={t} />
             {t.description && (
               <Card className="p-5">
                 <span className="text-[13px] text-ink-3">About</span>
                 <p className="mt-2 text-[14px] leading-6 text-ink-2">{t.description}</p>
               </Card>
             )}
-            <Card className="p-5">
-              <span className="text-[13px] text-ink-3">Next payout</span>
-              <p className="mt-2 num text-[22px] font-medium">{t.pot > 0 ? eth(t.pot) : "Pot fills with the next buy"}</p>
-              <p className="mt-1 text-[13px] text-ink-2">
-                {t.lastRoundAt ? `Last round ${ago(t.lastRoundAt)}. ` : ""}Pushed to holders automatically every few hours, weighted by hold time
-              </p>
-            </Card>
           </div>
         </div>
       </div>

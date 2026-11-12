@@ -40,6 +40,10 @@ export interface TokenSummary {
   bonusBuys: number;
   pot: number;
   potUsd: number;
+  /** pot a payout round needs before the keeper sends it */
+  potNeed: number;
+  /** when the keeper next looks at the pots (unix seconds) */
+  nextRoundAt: number | null;
   paid: number;
   paidUsd: number;
   creatorEarned: number;
@@ -172,6 +176,8 @@ export interface WalletView {
   payoutsCount: number;
   trades: Trade[];
   launched: { address: string; name: string; symbol: string; launched_at: number }[];
+  /** tokens this wallet sold out of: their hold pets ran away */
+  runaways: { token: string; name: string; symbol: string; image: string | null; since: number; leftAt: number }[];
 }
 
 export interface Leaderboard {

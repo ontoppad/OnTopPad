@@ -37,6 +37,16 @@ LP fees ──collect──▶ OnTopLaunchpad ──75%──▶ OnTopDistributo
                                     └─10%──▶ platform
 ```
 
+## Arcade layer (V2.0)
+
+Web only, no extra contracts or gas. Every piece reads real chain data.
+
+- **Hold Pet**: every bag hatches a pixel pet (species and colours from the token address). It grows on the payout tier clock: Pro at day 3, Legend at day 7. Sell out and it runs away. Token page and Portfolio pet pen.
+- **Lever Bonus**: before a buy, a slot lever spins reels that stop on the bonus your exact quote pays. A reveal, not a lottery.
+- **Claw Machine**: a three.js cabinet on the Arcade, one coin per live token; the claw grabs one at random and opens its screen.
+- **Pot Meter**: per-token thermometer. The mercury climbs with the pot up to what a round needs (`potForRound`: the keeper's gas reserve inside the 2% delivery cap), then with the keeper's clock; "jackpot incoming" in the last stretch.
+- **Arcade sounds**: synthesised coin on your buys, coin spill on payout rounds, reel ticks. Mute in the header.
+
 ## Contracts
 
 | Contract | Robinhood Chain (4663) | Robinhood Chain Testnet (46630) |

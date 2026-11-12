@@ -1,15 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useStats, useTokens, type TokenSummary } from "../lib/api.ts";
 import { amount, bps, eth, or, usd } from "../lib/format.ts";
 import { scrollToEl } from "../lib/scroll.ts";
-import { HOUSE_SYMBOL } from "../lib/chain.ts";
+import { chain, HOUSE_SYMBOL } from "../lib/chain.ts";
+import type { ClawApi } from "../components/ClawScene.tsx";
 import { Art, ChangeText, Poster, PosterSkeleton } from "../components/TokenCard.tsx";
 import { ChainMarket } from "../components/ChainMarket.tsx";
 import { ArcadeSidebar } from "../components/ArcadeSidebar.tsx";
-import { artSrc, ButtonLink, cx, Logo, Segmented, Skeleton, SkeletonLine, Stamp } from "../components/ui.tsx";
+import { artSrc, ButtonLink, cx, Logo, pill, Segmented, Skeleton, SkeletonLine, Stamp, TokenArt } from "../components/ui.tsx";
+
+const ClawScene = lazy(() => import("../components/ClawScene.tsx"));
 
 type Sort = "hot" | "new" | "mcap" | "bonus" | "pot" | "holders";
 const SORTS: { value: Sort; label: string }[] = [
@@ -167,6 +170,79 @@ function TopFive({ tokens }: { tokens: TokenSummary[] }) {
           </dl>
         </motion.div>
       </AnimatePresence>
+    </section>
+  );
+}
+
+// ───────────── claw machine ─────────────
+
+/** Can't pick? The claw grabs a random live token and drops you on its screen. */
+function ClawMachine({ tokens }: { tokens: TokenSummary[] }) {
+  const nav = useNavigate();
+  const api = useRef<ClawApi | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [prize, setPrize] = useState<TokenSummary | null>(null);
+  const [failed, setFailed] = useState(false);
+  // the machine holds the board's hottest tokens; the list is fixed at mount so the coins don't reshuffle under the claw
+  const [pool] = useState(() => tokens.slice(0, 18));
+  useEffect(() => {
+    if (!prize) return;
+    const id = setTimeout(() => nav(`/token/${prize.address}`), 1800);
+    return () => clearTimeout(id);
+  }, [prize, nav]);
+  const avg = pool.reduce((s, t) => s + t.bonusBps, 0) / pool.length;
+  const play = () => (failed ? setPrize(pool[Math.floor(Math.random() * pool.length)]!) : api.current?.play());
+
+  return (
+    <section className="stage-dark relative isolate mt-16 overflow-hidden border-y border-line bg-[var(--bg-deep)] px-4 py-16 md:px-6">
+      <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)]">
+        <div className="flex flex-col items-start gap-4">
+          <span className="num text-[13px] text-ink-3">[ claw machine ]</span>
+          <h2 className="font-title text-[30px] leading-[1.05] md:text-[44px]">Can't pick? Let the claw grab one</h2>
+          <p className="max-w-md text-[15px] leading-6 text-ink-2">
+            Every coin in the cabinet is a live pool on {chain.name}. Drop the claw: it grabs one at random and takes you straight to its screen.
+          </p>
+          <button type="button" onClick={play} disabled={busy || !!prize} className={cx(pill, "h-12 px-6 text-[15px]")}>
+            {prize ? `Got $${prize.symbol}` : busy ? "The claw is moving" : "Insert coin · drop the claw"}
+          </button>
+          <dl className="num mt-2 grid grid-cols-2 gap-x-8 gap-y-1 text-[12px] text-ink-3">
+            <dt>Coins in the machine</dt>
+            <dd className="text-ink-2">{pool.length}</dd>
+            <dt>Average bonus inside</dt>
+            <dd className="text-ink-2">+{(avg / 100).toFixed(1)}%</dd>
+          </dl>
+        </div>
+        <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl border-2 border-[var(--sticker-shadow)] bg-[#0b0c09] shadow-[6px_6px_0_var(--sticker-shadow)] sm:aspect-[16/11]">
+          {failed ? (
+            <div className="absolute inset-0 grid grid-cols-4 gap-2 p-4 opacity-60 sm:grid-cols-6">
+              {pool.map((t) => (
+                <TokenArt key={t.address} src={t.image} address={t.address} symbol={t.symbol} size={96} className="!h-auto !w-full aspect-square !rounded-full" />
+              ))}
+            </div>
+          ) : (
+            <Suspense fallback={<Skeleton className="absolute inset-0 rounded-none" />}>
+              <ClawScene tokens={pool} api={api} onBusy={setBusy} onPrize={setPrize} onFail={() => setFailed(true)} />
+            </Suspense>
+          )}
+          <AnimatePresence>
+            {prize && (
+              <motion.div className="absolute inset-0 grid place-items-center bg-black/55 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <motion.div
+                  initial={{ scale: 0.6, rotate: -8 }}
+                  animate={{ scale: 1, rotate: -3 }}
+                  transition={{ type: "spring", bounce: 0.5, duration: 0.6 }}
+                  className="flex flex-col items-center gap-3 rounded-2xl border-2 border-[var(--sticker-shadow)] bg-lime px-8 py-6 text-center text-lime-ink shadow-[6px_6px_0_var(--sticker-shadow)]"
+                >
+                  <TokenArt src={prize.image} address={prize.address} symbol={prize.symbol} size={72} className="border-2 border-[var(--sticker-shadow)]" />
+                  <span className="num text-[13px] opacity-70">You grabbed</span>
+                  <span className="font-title text-[30px] leading-none">${prize.symbol}</span>
+                  <span className="num text-[13px] font-semibold">+{bps(prize.bonusBps)} on every buy · opening its screen</span>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
     </section>
   );
 }
@@ -418,6 +494,7 @@ function ArcadeMain() {
     <div>
       <Hero top={tokens[0]} />
       <TopFive tokens={tokens} />
+      {tokens.length >= 3 && <ClawMachine tokens={tokens} />}
       {tokens.length > 3 && <Carousel tokens={tokens.slice(0, 12)} />}
       <Board key={q} initialQ={q} tokens={tokens} sort={sort} setSort={setSort} />
       <ChainMarket limit={30} className="border-t border-line" />

@@ -7,6 +7,9 @@ import type { TokenSummary } from "../lib/api.ts";
 import { buy, errorText, quote, sell, tokenBalance } from "../lib/chain.ts";
 import { amount as fmtAmount, eth, or, usd } from "../lib/format.ts";
 import { useWallet } from "../lib/wallet.tsx";
+import { clunk, coin, tick } from "../lib/sound.ts";
+import type { Mood } from "./Pet.tsx";
+import { REEL_MS, Slot, SPIN_MS } from "./Slot.tsx";
 import { useToast } from "./toast.tsx";
 import { Button, cx, Num, Segmented, Stamp } from "./ui.tsx";
 
@@ -32,7 +35,7 @@ function Burst() {
   );
 }
 
-export function TradePanel({ token, ethUsd }: { token: TokenSummary; ethUsd: number }) {
+export function TradePanel({ token, ethUsd, onTrade }: { token: TokenSummary; ethUsd: number; onTrade?: (kind: Mood["kind"]) => void }) {
   const w = useWallet();
   const toast = useToast();
   const qc = useQueryClient();
@@ -42,6 +45,9 @@ export function TradePanel({ token, ethUsd }: { token: TokenSummary; ethUsd: num
   const [busy, setBusy] = useState(false);
   const [bursts, setBursts] = useState(0);
   const [debounced, setDebounced] = useState(input);
+  const [pulls, setPulls] = useState(0);
+  const [spinning, setSpinning] = useState(false);
+  const [shownFor, setShownFor] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(input), 300);
@@ -79,15 +85,42 @@ export function TradePanel({ token, ethUsd }: { token: TokenSummary; ethUsd: num
   const tokBal = Number(formatUnits(held, 18));
   const inputNum = Number(debounced) || 0;
   const over = side === "buy" ? !!w.address && inputNum > ethBal : !!w.address && inputNum > tokBal;
+  // the reels show the bonus this exact quote pays, to the hundredth of a percent
+  const digits = q.data && q.data.out > 0n ? (Number((q.data.bonus * 10_000n) / q.data.out) / 100).toFixed(2) : "0.00";
+  // a refetch that only moves the amounts keeps the reels revealed; a new amount or a new rate re-arms the lever
+  const quoteKey = q.data ? `${amountIn}:${digits}` : null;
+  const needsPull = side === "buy" && bonus > 0 && shownFor !== quoteKey;
+
+  /** Spins the reels onto the quoted bonus; resolves once the last reel has landed. */
+  async function pull() {
+    if (!quoteKey || spinning) return;
+    const key = quoteKey;
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setPulls((n) => n + 1);
+      setSpinning(true);
+      const ticking = setInterval(tick, 70);
+      REEL_MS.forEach((ms) => setTimeout(clunk, ms));
+      await new Promise((r) => setTimeout(r, SPIN_MS));
+      clearInterval(ticking);
+      setSpinning(false);
+    }
+    setShownFor(key);
+  }
 
   async function submit() {
     if (!w.client || !q.data) return;
+    // Lever Bonus: a buy pulls the lever first, so the bonus is on the reels before the wallet opens
+    if (needsPull) await pull();
     setBusy(true);
     try {
       await w.ensureChain();
       const minOut = (q.data.out * BigInt(10_000 - slip)) / 10_000n;
       const r = side === "buy" ? await buy(w.client, token, amountIn, minOut) : await sell(w.client, token, amountIn, minOut);
-      if (side === "buy") setBursts((n) => n + 1);
+      if (side === "buy") {
+        setBursts((n) => n + 1);
+        coin();
+      }
+      onTrade?.(side === "buy" ? (held === 0n ? "hatch" : "happy") : amountIn >= held ? "run" : "flinch");
       const b = r.trade ? Number(formatUnits(r.trade.bonus, 18)) : 0;
       toast({
         title: side === "buy" ? `Bought $${token.symbol}` : `Sold $${token.symbol}`,
@@ -167,16 +200,33 @@ export function TradePanel({ token, ethUsd }: { token: TokenSummary; ethUsd: num
               <span className="text-[13px] text-ink-3">Base from the pool</span>
               <span className="num text-[14px] text-ink-2">{out > 0 ? fmtAmount(out) : q.isFetching ? "Quoting" : "Enter an amount"}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <Stamp bps={token.bonusBps} />
-              <span className="num text-[14px] text-accent">{bonus > 0 ? `+${fmtAmount(bonus)}` : q.isFetching || !q.data ? "Quoting" : "Treasury refilling"}</span>
-            </div>
+            {bonus > 0 ? (
+              <>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-[13px] text-ink-3">Bonus on top</span>
+                  <span className="num text-[14px] text-accent">{needsPull ? (spinning ? "Reels spinning" : "Pull the lever") : `+${fmtAmount(bonus)}`}</span>
+                </div>
+                <div className="flex justify-center py-1">
+                  <Slot digits={digits} pulls={pulls} spinning={spinning} revealed={!needsPull} onPull={() => void pull()} />
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-between">
+                <Stamp bps={token.bonusBps} />
+                <span className="num text-[14px] text-accent">{q.isFetching || !q.data ? "Quoting" : "Treasury refilling"}</span>
+              </div>
+            )}
             <div className="mt-2 flex items-baseline justify-between border-t border-line pt-3">
               <span className="text-[13px] text-ink">You get</span>
-              {total > 0 ? <Num value={total} format={fmtAmount} className="text-[22px] font-medium" /> : <span className="text-[13px] text-ink-3">Waiting for a quote</span>}
+              {total > 0 && !needsPull ? (
+                <Num value={total} format={fmtAmount} className="text-[22px] font-medium" />
+              ) : (
+                <span className="text-[13px] text-ink-3">{total > 0 ? "Revealed by the lever" : "Waiting for a quote"}</span>
+              )}
             </div>
             <span className="num text-[12px] text-ink-3">
-              ≈ {usd(total * token.price * ethUsd)} · {edge.toFixed(2)}% ahead of the pre-trade price after the {(feeFor(token.bonusBps) / 1e4).toFixed(2)}% swap fee
+              {total > 0 && !needsPull && <>≈ {usd(total * token.price * ethUsd)} · </>}
+              {edge.toFixed(2)}% ahead of the pre-trade price after the {(feeFor(token.bonusBps) / 1e4).toFixed(2)}% swap fee
             </span>
           </>
         ) : (
@@ -208,8 +258,8 @@ export function TradePanel({ token, ethUsd }: { token: TokenSummary; ethUsd: num
           Switch network
         </Button>
       ) : (
-        <Button variant="primary" size="lg" disabled={busy || !q.data || over || input !== debounced} onClick={() => void submit()}>
-          {busy ? "Confirm in wallet" : over ? "Not enough balance" : side === "buy" ? `Buy $${token.symbol}` : `Sell $${token.symbol}`}
+        <Button variant="primary" size="lg" disabled={busy || spinning || !q.data || over || input !== debounced} onClick={() => void submit()}>
+          {busy ? "Confirm in wallet" : over ? "Not enough balance" : spinning ? "Reels spinning" : side === "buy" ? (needsPull ? `Pull and buy $${token.symbol}` : `Buy $${token.symbol}`) : `Sell $${token.symbol}`}
         </Button>
       )}
       {q.error && <p className="text-[12px] text-down-ink">{errorText(q.error)}</p>}

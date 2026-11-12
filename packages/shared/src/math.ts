@@ -22,6 +22,19 @@ export function deliveryFee(gasPrice: bigint, recipients: number, paid: bigint):
   return fee * 10_000n > (paid + fee) * BigInt(MAX_DELIVERY_BPS) ? null : fee;
 }
 
+/** Holders per distribute call. */
+export const ROUND_BATCH = 150;
+/** The keeper skips any pot smaller than this. */
+export const MIN_POT_WEI = 10n ** 12n;
+
+/** Smallest pot a round goes out with: its gas set aside, and that gas inside the 2% cap, so paid ≥ 49 × gas → pot ≥ 50 × gas. */
+export function potForRound(gasPrice: bigint, recipients: number): bigint {
+  const n = Math.max(1, recipients);
+  const gas = roundGas(n) + roundGas(0) * BigInt(Math.ceil(n / ROUND_BATCH) - 1);
+  const need = 50n * gasPrice * gas;
+  return need > MIN_POT_WEI ? need : MIN_POT_WEI;
+}
+
 /** LP fee in ppm for a bonus — same rounding as OnTopLaunchpad.feeFor. */
 export function feeFor(bonusBps: number): number {
   const keep = Math.ceil((1_010_000 * 10_000) / (10_000 + bonusBps));

@@ -234,6 +234,45 @@ a:hover > .wordmark > span[aria-hidden] {
   91% { text-shadow: -2px 0 #ff2bd6, 2px 0 #22f2ff; transform: none; }
 }
 
+/* hold pets: a one-pixel bob, a blink now and then, an egg that wobbles while it waits */
+.pet-bob {
+  animation: pet-bob 0.9s steps(1) infinite;
+}
+@keyframes pet-bob {
+  50% { transform: translateY(-6.25%); }
+}
+.pet-run {
+  animation: pet-bob 0.18s steps(1) infinite;
+}
+.pet-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pet-blink 4.2s steps(1) infinite;
+}
+@keyframes pet-blink {
+  95% { transform: scaleY(0.25); }
+  97% { transform: none; }
+}
+.pet-wobble {
+  transform-origin: 50% 100%;
+  animation: pet-wobble 2.6s ease-in-out infinite;
+}
+@keyframes pet-wobble {
+  0%, 70%, 100% { transform: rotate(0); }
+  76% { transform: rotate(-7deg); }
+  82% { transform: rotate(6deg); }
+  88% { transform: rotate(-4deg); }
+  94% { transform: rotate(2deg); }
+}
+.pet-shake {
+  transform-origin: 50% 100%;
+  animation: pet-shake 0.12s linear infinite;
+}
+@keyframes pet-shake {
+  25% { transform: rotate(-9deg); }
+  75% { transform: rotate(9deg); }
+}
+
 .blink {
   animation: blink 1s steps(1) infinite;
 }

@@ -1,15 +1,13 @@
 import { encodeAbiParameters, keccak256, type Address } from "viem";
-import { COLLECT_GAS, deliveryFee, onTopDistributorAbi, onTopLaunchpadAbi, PLATFORM_BPS, roundGas } from "@ontoppad/shared";
+import { COLLECT_GAS, deliveryFee, MIN_POT_WEI, onTopDistributorAbi, onTopLaunchpadAbi, PLATFORM_BPS, ROUND_BATCH as BATCH, roundGas } from "@ontoppad/shared";
 import { client, contracts, wallet } from "./chain.ts";
 import { config } from "./config.ts";
-import { db, getMeta } from "./db.ts";
+import { db, getMeta, setMeta } from "./db.ts";
 import { holderWeights, quoteUsd } from "./queries.ts";
 
-const BATCH = 150;
 /** Smallest payment worth a transfer; smaller shares roll into the next round. */
 const MIN_PAYMENT = 10n ** 9n;
 const MIN_COLLECT_WEI = 10n ** 10n;
-const MIN_POT_WEI = 10n ** 12n;
 const NATIVE = "0x0000000000000000000000000000000000000000" as const;
 /** A self-funded keeper pulls the platform's ETH fees into its own wallet once gas money runs this low. */
 const REFILL_BELOW = 10n ** 15n;
@@ -33,8 +31,12 @@ async function send(fn: () => Promise<`0x${string}`>) {
   return receipt;
 }
 
-/** Gas price to charge against; 0 keeps the testnet keeper paying its own way with no thresholds. */
-const gasPrice = async () => (config.selfFundedKeeper ? client.getGasPrice() : 0n);
+/** Gas price to charge against; 0 keeps the testnet keeper paying its own way with no thresholds. Kept in meta for the pot meter. */
+async function gasPrice() {
+  const gp = config.selfFundedKeeper ? await client.getGasPrice() : 0n;
+  setMeta("keeperGasPrice", gp.toString());
+  return gp;
+}
 
 async function collectAll() {
   const gp = await gasPrice();
@@ -145,6 +147,12 @@ export function runKeeper() {
       busy = false;
     }
   };
+  // the pot meter counts down to the next tick
+  const next = (ms: number) => setMeta("keeperNextAt", Math.floor((Date.now() + ms) / 1000));
+  next(30_000);
   setTimeout(tick, 30_000);
-  setInterval(tick, config.keeperIntervalSec * 1000);
+  setInterval(() => {
+    next(config.keeperIntervalSec * 1000);
+    void tick();
+  }, config.keeperIntervalSec * 1000);
 }

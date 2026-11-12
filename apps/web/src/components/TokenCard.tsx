@@ -3,6 +3,7 @@ import type { TokenSummary } from "../lib/api.ts";
 import { HOUSE_SYMBOL } from "../lib/chain.ts";
 import { eth, or, pct, usd } from "../lib/format.ts";
 import { artSrc, cx, Logo, Skeleton, SkeletonLine, Stamp, TokenArt } from "./ui.tsx";
+import { PotBar } from "./PotMeter.tsx";
 
 /** Change since launch when the token is younger than a day, otherwise 24h. */
 export function change(t: TokenSummary) {
@@ -40,6 +41,7 @@ export function Poster({ t }: { t: TokenSummary }) {
         <Art t={t} className="transition-transform duration-500 ease-out group-hover:scale-[1.06]" />
         <Stamp bps={t.bonusBps} className="absolute left-2 top-2 text-[11px]" />
         <span className="num absolute bottom-2 right-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] text-white">{usd(t.fdvUsd)}</span>
+        <PotBar t={t} />
       </div>
       <span className="truncate text-[13px] text-ink">
         {t.name} <span className="num text-ink-3">${t.symbol}</span>

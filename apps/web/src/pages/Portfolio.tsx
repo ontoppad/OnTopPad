@@ -4,6 +4,7 @@ import { txUrl } from "../lib/chain.ts";
 import { ago, amount, eth, share, short, usd } from "../lib/format.ts";
 import { useWallet } from "../lib/wallet.tsx";
 import { Art, PosterSkeleton } from "../components/TokenCard.tsx";
+import { PetPen } from "../components/Pet.tsx";
 import { AddressChip, Band, BandStat, Card, Heading, PageHero, pill, pillGhost, Reveal, Skeleton, SkeletonRows, Stamp, TierMeter } from "../components/ui.tsx";
 
 /** A bag on the shelf: the token's poster with your value on it, your tier and your next cut underneath. */
@@ -101,6 +102,8 @@ export default function Portfolio() {
               <BandStat label="Bonus received" value={data.bonusUsd} format={usd} sub={data.bonusTokens ? `${amount(data.bonusTokens)} tokens` : undefined} empty="Buy to get it" />
             </div>
           </Band>
+
+          <PetPen view={data} own={own} />
 
           <section className="px-4 py-16 md:px-6">
             <Heading title="Bags and tiers" sub={bags.length ? "Biggest bag first · hold longer to climb from Rookie to Legend" : undefined} />

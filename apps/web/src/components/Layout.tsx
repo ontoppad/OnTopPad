@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate, useOutlet } from "react-router";
 import { AnimatePresence, motion, MotionConfig, useScroll, useSpring } from "motion/react";
-import { Activity, BookOpen, Gamepad2, Gift, Moon, Rocket, Search, Sun, UserRound, Wallet, X } from "lucide-react";
+import { Activity, BookOpen, Gamepad2, Gift, Moon, Rocket, Search, Sun, UserRound, Volume2, VolumeX, Wallet, X } from "lucide-react";
 import { formatEther } from "viem";
 import { useActivity, useConfig } from "../lib/api.ts";
 import { chain, contracts, errorText, network } from "../lib/chain.ts";
@@ -13,6 +13,7 @@ import { useToast } from "./toast.tsx";
 import Lenis from "lenis";
 import { smooth } from "../lib/scroll.ts";
 import { playful } from "../lib/fx.ts";
+import { setMuted, spill, useMuted } from "../lib/sound.ts";
 
 const NAV = [
   { to: "/arcade", label: "Arcade", icon: Gamepad2 },
@@ -157,6 +158,14 @@ function SearchBox() {
 /** Live trade marquee. It only moves because the data underneath is live. */
 function Ticker() {
   const { data } = useActivity("all", 24);
+  // a payout round that lands while the page is open spills coins; the ones already on the tape at load stay quiet
+  const seen = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (!data) return;
+    const paid = data.filter((a) => a.kind === "payout").map((a) => a.tx);
+    if (seen.current && paid.some((tx) => !seen.current!.has(tx))) spill();
+    seen.current = new Set([...(seen.current ?? []), ...paid]);
+  }, [data]);
   if (!data)
     return (
       <div aria-busy className="flex h-9 items-center gap-8 overflow-hidden border-b border-line bg-deep pl-4">
@@ -199,6 +208,16 @@ function Ticker() {
   );
 }
 
+/** Coin on your buys, a coin spill on payout rounds. */
+function SoundToggle() {
+  const muted = useMuted();
+  return (
+    <button onClick={() => setMuted(!muted)} aria-label={muted ? "Turn arcade sounds on" : "Mute arcade sounds"} aria-pressed={!muted} className="grid size-8 place-items-center rounded-lg text-ink-2 hover:text-ink hover:bg-raised transition-colors duration-150">
+      {muted ? <VolumeX size={18} strokeWidth={1.5} /> : <Volume2 size={18} strokeWidth={1.5} />}
+    </button>
+  );
+}
+
 function NetworkStatus() {
   const { data } = useConfig();
   const live = data && data.head - data.indexed < 120;
@@ -222,6 +241,7 @@ function Footer() {
             <Wordmark className="text-[13px]" />
           </div>
           <p className="max-w-xs text-[13px] text-ink-2">Start ahead. Stay paid. Every bonus and payout, public and verifiable on {chain.name}.</p>
+          <span className="num text-[12px] text-ink-3">ONTOPPAD V2.0 · Play while you trade</span>
           <a href="https://x.com/OnTopPad" target="_blank" rel="noreferrer" className="text-[13px] text-ink-2 hover:text-ink">
             @OnTopPad on X
           </a>
@@ -342,6 +362,7 @@ export function Layout() {
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
               </svg>
             </a>
+            <SoundToggle />
             <button onClick={toggle} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`} className="grid size-8 place-items-center rounded-lg text-ink-2 hover:text-ink hover:bg-raised transition-colors duration-150">
               {theme === "dark" ? <Sun size={18} strokeWidth={1.5} /> : <Moon size={18} strokeWidth={1.5} />}
             </button>
