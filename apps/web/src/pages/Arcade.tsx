@@ -6,6 +6,7 @@ import { amount, eth, or, usd } from "../lib/format.ts";
 import { scrollToEl } from "../lib/scroll.ts";
 import { HOUSE_SYMBOL } from "../lib/chain.ts";
 import { Art, ChangeText, Poster, PosterSkeleton } from "../components/TokenCard.tsx";
+import { ChainMarket } from "../components/ChainMarket.tsx";
 import { artSrc, ButtonLink, cx, Logo, Segmented, Skeleton, SkeletonLine, Stamp } from "../components/ui.tsx";
 
 type Sort = "hot" | "new" | "mcap" | "bonus" | "pot" | "holders";
@@ -368,6 +369,7 @@ export default function Arcade() {
       <Spotlight tokens={tokens} />
       {tokens.length > 3 && <Carousel tokens={tokens.slice(0, 12)} />}
       <Board key={q} initialQ={q} tokens={tokens} sort={sort} setSort={setSort} />
+      <ChainMarket limit={30} className="border-t border-line" />
       <Modes tokens={tokens} pick={pick} />
       <section className="flex flex-col items-center gap-4 px-4 py-16 text-center">
         <h2 className="font-title text-[26px] leading-[1.1] md:text-[34px]">Your token could be next on the board</h2>

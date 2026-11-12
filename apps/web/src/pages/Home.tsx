@@ -10,6 +10,7 @@ import { HOUSE_SYMBOL, quote } from "../lib/chain.ts";
 import { ago, amount, eth, or, usd } from "../lib/format.ts";
 import { Art } from "../components/TokenCard.tsx";
 import { ContractsTable } from "../components/Contracts.tsx";
+import { ChainMarket } from "../components/ChainMarket.tsx";
 import { cx, Segmented, Skeleton, SkeletonLine, Stamp, TokenArt, useTween } from "../components/ui.tsx";
 import { ENTER_EVENT, splashDue } from "../components/Splash.tsx";
 import type { Hover } from "../components/CrtScene.tsx";
@@ -877,6 +878,7 @@ export default function Home() {
       <Hero tokens={list} onHover={onHover} onPick={onPick} />
       <Marquee tokens={list} />
       <NowPlaying tokens={list} onHover={onHover} onPick={onPick} />
+      <ChainMarket />
       <HowItPays onHover={onHover} />
       <Pitch />
       <Receipts house={house} ethUsd={cfg?.ethUsd ?? 0} />

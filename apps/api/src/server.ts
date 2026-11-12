@@ -11,6 +11,7 @@ import { contracts, wallet } from "./chain.ts";
 import { runIndexer, indexerState } from "./indexer.ts";
 import { runKeeper } from "./keeper.ts";
 import { runPriceFeed, getEthUsd } from "./price.ts";
+import { runMarketFeed, getMarket } from "./market.ts";
 import { allowUpload, createMetadata, getMetadata, mediaDir, MetaError } from "./metadata.ts";
 import * as q from "./queries.ts";
 
@@ -67,6 +68,9 @@ app.get("/config", (c) =>
 );
 
 app.get("/stats", (c) => c.json({ ...cached("stats", q.stats), ...indexerState() }));
+
+// the wider Robinhood Chain market, refreshed from GeckoTerminal every 2 minutes
+app.get("/market", (c) => c.json(getMarket()));
 
 app.get("/tokens", (c) => {
   const sort = c.req.query("sort") ?? "hot";
@@ -176,5 +180,6 @@ serve({ fetch: root.fetch, port: config.port, hostname: config.host }, () =>
   console.log(`[api] ${network.label} on ${config.host}:${config.port}${config.webDir ? " (serving web)" : ""}`),
 );
 runPriceFeed();
+runMarketFeed();
 void runIndexer();
 runKeeper();

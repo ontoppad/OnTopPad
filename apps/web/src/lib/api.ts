@@ -179,6 +179,22 @@ export interface Leaderboard {
   bonus: { account: string; value: number; valueUsd: number; buys: number }[];
 }
 
+export interface MarketToken {
+  address: string;
+  name: string;
+  symbol: string;
+  image: string | null;
+  pool: string;
+  dex: string;
+  priceUsd: number;
+  change24h: number;
+  volume24hUsd: number;
+  liquidityUsd: number;
+  fdvUsd: number;
+  txns24h: number;
+  createdAt: number;
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, init);
   // a proxy error page is HTML, not JSON: fall back to the status
@@ -191,6 +207,7 @@ const live = (ms: number) => ({ refetchInterval: ms, staleTime: ms / 2 });
 
 export const useConfig = () => useQuery({ queryKey: ["config"], queryFn: () => api<Config>("/config"), ...live(10_000) });
 export const useStats = () => useQuery({ queryKey: ["stats"], queryFn: () => api<Stats>("/stats"), ...live(8_000) });
+export const useMarket = () => useQuery({ queryKey: ["market"], queryFn: () => api<{ items: MarketToken[]; updatedAt: number }>("/market"), ...live(60_000) });
 export const useTokens = (sort = "hot") =>
   useQuery({
     queryKey: ["tokens", sort],
